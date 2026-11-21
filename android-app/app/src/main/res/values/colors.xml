@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="white">#FFFFFF</color>
+    <color name="dark">#0B0B0B</color>
+    <color name="surface_dark">#161616</color>
+    <color name="ink">#111111</color>
+    <color name="grey">#6B7280</color>
+    <color name="grey2">#9CA3AF</color>
+    <color name="lime">#C8F542</color>
+    <color name="bid_green">#1E7D32</color>
+    <color name="ask_red">#C62828</color>
+</resources>

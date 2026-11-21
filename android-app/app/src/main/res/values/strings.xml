@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Prognos Labs</string>
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_markets">Markets</string>
+    <string name="nav_wallet">Wallet</string>
+    <string name="search_hint">Search markets</string>
+    <string name="all">All</string>
+    <string name="featured">Featured</string>
+    <string name="forecast_title">Forecast</string>
+    <string name="no_forecast">No forecast for this market yet. There is no live price to work from.</string>
+    <string name="no_price">No live price yet</string>
+    <string name="trading_soon">Trading opens soon</string>
+    <string name="trading_soon_detail">Trading opens with the next release. Orders open then, and your balance will show here.</string>
+    <string name="watchlist_empty">No markets saved yet. Tap the star on a market to keep it here.</string>
+    <string name="watchlist_note">Saved on this device only.</string>
+    <string name="load_error">Markets could not be loaded. Check your connection and try again.</string>
+    <string name="retry">Try again</string>
+    <string name="loading">Loading markets</string>
+    <string name="win_line_not_set">Win line not set yet</string>
+    <string name="price_now">Price now</string>
+    <string name="average_so_far">Average so far</string>
+    <string name="win_line">Win line</string>
+    <string name="up">Up</string>
+    <string name="down">Down</string>
+    <string name="bids">Bids</string>
+    <string name="asks">Asks</string>
+    <string name="time_left">Time left</string>
+    <string name="closes_in">Closes in</string>
+    <string name="closed_awaiting">Closed - awaiting resolution</string>
+    <string name="open">Open</string>
+    <string name="wallet_empty">No transactions yet.</string>
+    <string name="deposit_note">Deposits open with trading. When trading opens, you will link your wallet here and deposit from it. Nothing is deposited yet.</string>
+    <string name="withdraw_note">Withdrawals open with trading. When trading opens, you will link your wallet here and withdraw to it. Nothing is withdrawn yet.</string>
+</resources>

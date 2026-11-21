@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wallet linked - Prognos Labs</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #F5F2EB; color: #111111; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 24px; }
+  .card { width: 100%; max-width: 420px; background: #fff; border: 1px solid #e3ded2; border-radius: 20px; padding: 28px 24px; text-align: center; box-shadow: 0 8px 30px rgba(17,17,17,.06); }
+  .tick { width: 56px; height: 56px; margin: 0 auto 16px; border-radius: 50%; background: #C8F542; color: #111; font-size: 30px; line-height: 56px; font-weight: 700; }
+  h1 { margin: 0 0 8px; font-size: 22px; letter-spacing: -0.4px; }
+  p { margin: 0 0 8px; font-size: 15px; line-height: 1.5; color: #555; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; background: #F5F2EB; border: 1px solid #e3ded2; border-radius: 8px; padding: 2px 8px; word-break: break-all; }
+  .btn { display: block; width: 100%; margin-top: 20px; padding: 15px; border: 0; border-radius: 14px; background: #111; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; text-decoration: none; }
+  .btn.lime { background: #C8F542; color: #111; }
+  .note { margin-top: 16px; font-size: 13px; color: #888; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="tick">&#10003;</div>
+  <h1 id="title">Wallet linked</h1>
+  <p id="addr"></p>
+  <p id="msg">Returning you to the Prognos Labs app.</p>
+  <a class="btn lime" id="openBtn" href="#">Open Prognos Labs app</a>
+  <a class="btn" id="siteBtn" href="https://prognoslabs.xyz/">Back to Prognos Labs</a>
+  <p class="note">If the app does not open, tap "Open Prognos Labs app" above. The app must be installed on this device.</p>
+</div>
+<script>
+(function () {
+  var q = new URLSearchParams(window.location.search);
+  var session = q.get("session") || "";
+  var address = q.get("address") || "";
+  var short = "";
+  if (address && address.length > 12) short = address.slice(0, 6) + "..." + address.slice(-4);
+  else short = address;
+  var addrEl = document.getElementById("addr");
+  var msgEl = document.getElementById("msg");
+  var titleEl = document.getElementById("title");
+  var openBtn = document.getElementById("openBtn");
+  if (!session || !address) {
+    titleEl.textContent = "Link not complete";
+    addrEl.textContent = "";
+    msgEl.textContent = "This page needs a session and a wallet address. Start the link again from the Prognos Labs app.";
+    openBtn.style.display = "none";
+    return;
+  }
+  addrEl.innerHTML = "Wallet <code>" + short + "</code> is linked to Prognos Labs.";
+  // Hand the session back to the app. The app only accepts it when the
+  // wallet is one it asked to link (or already linked) and the server
+  // confirms the session belongs to that wallet.
+  var deep = "prognoslabs://linked?session=" + encodeURIComponent(session) +
+             "&address=" + encodeURIComponent(address);
+  openBtn.href = deep;
+  // Try to open the app straight away. If the app is not installed the
+  // browser stays here and the button above is the manual fallback.
+  setTimeout(function () { window.location.href = deep; }, 400);
+})();
+</script>
+</body>
+</html>

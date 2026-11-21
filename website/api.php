@@ -788,7 +788,7 @@ function price_outcome($asset, $winStart, $winEnd) {
 }
 
 /* 1 when the first outcome won, 0 when the second won, null when it is not reported. */
-function gate_outcome($marketId) {
+function reported_outcome($marketId) {
     global $BASE;
     $body = fetch_body($BASE . '/api/v4/prediction/markets/' . rawurlencode($marketId));
     if ($body === null) return null;
@@ -1076,7 +1076,7 @@ function action_ticker() {
     echo $payload;
 }
 
-/* score ended markets that have not been scored yet, then train and gate the challenger. bounded, so a pass never holds a request for long. at most one pass every 10 minutes. */
+/* score ended markets that have not been scored yet, then train and check the challenger. bounded, so a pass never holds a request for long. at most one pass every 10 minutes. */
 function learn_pass($maxScore = 4) {
     global $LEARN_LOG, $LEARN_PASS_GAP, $LEARN_MIN_SAMPLES, $LEARN_PROMOTE_MARGIN;
     $state = learn_load_state();
@@ -1106,8 +1106,8 @@ function learn_pass($maxScore = 4) {
     $n = 0;
     foreach ($byMarket as $id => $rec) {
         if ($n >= $maxScore) break;
-        $out = gate_outcome($id);
-        $src = 'gate';
+        $out = reported_outcome($id);
+        $src = 'reported';
         if ($out === null) {
             $winStart = (int) $rec['end'] - (int) $rec['win'];
             $out = price_outcome(isset($rec['asset']) ? $rec['asset'] : '', $winStart, (int) $rec['end']);

@@ -1,0 +1,15 @@
+# Secrets and private keys must never be committed.
+*.key
+*.pem
+.env*
+*.p12
+*.keystore
+
+# Android build outputs and local config
+.gradle/
+.kotlin/
+build/
+app/build/
+local.properties
+*.apk
+captures/

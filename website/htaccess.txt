@@ -1,0 +1,26 @@
+# Partners only while wallet submissions are open.
+# The main site (index.html) asks for a username and password.
+# The app API (api.php) is PUBLIC so the Prognos Labs app can use it.
+# This is safe: the hardened api.php (104 kB, live) requires a valid
+# wallet session token for every trading call (balance, positions,
+# orders) and caps orders at 1,000,000 USDT, so opening api.php does
+# not open trading. The wallet page (submit-wallet.html) and its
+# endpoint (wallet-api.php) stay public. The link return page
+# (linked.html) and the App Links file (.well-known/assetlinks.json)
+# stay public.
+# Clean addresses: /submit-wallet loads submit-wallet.html without the extension.
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.html -f
+RewriteRule ^(.*)$ $1.html [L]
+
+<FilesMatch "^index\.html$">
+    AuthType Basic
+    AuthName "Prognos Labs"
+    AuthUserFile /home/fruiwffh/prognoslabs.xyz/.htpasswd
+    Require valid-user
+</FilesMatch>
+
+<Files ".htpasswd">
+    Require all denied
+</Files>

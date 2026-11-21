@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="light" />
     <meta name="referrer" content="no-referrer" />
-    <meta name="description" content="Prognosis is a prediction market. Follow live questions about what happens next, watch the price move as traders take a view, and see how each market settles on the real outcome." />
+    <meta name="description" content="Prognos Labs is a prediction market. Follow live questions about what happens next, watch the price move as traders take a view, and see how each market settles on the real outcome." />
     <link rel="icon" type="image/png" href="logo-light.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <title>Prognosis: Prediction Markets</title>
+    <title>Prognos Labs: Prediction Markets</title>
     <style>
       :root{
         --black:#111111;
@@ -61,6 +61,10 @@
       .btn-black:hover{background:#000}
       .btn-lime{background:var(--lime);color:var(--black);border-color:var(--black)}
       .btn-lime:hover{filter:brightness(.97)}
+      .btn-buy{background:var(--bid);color:var(--white);border-color:var(--bid)}
+      .btn-buy:hover{filter:brightness(1.08)}
+      .btn-sell{background:var(--ask);color:var(--white);border-color:var(--ask)}
+      .btn-sell:hover{filter:brightness(1.08)}
       .btn[disabled]{opacity:.45;cursor:not-allowed}
 
       /* ticker tape: black strip */
@@ -181,6 +185,13 @@
       .sector-tab.on{background:var(--black);color:var(--white)}
       .sector-tab .n{font-family:var(--mono);font-weight:400;opacity:.7}
       .sector-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+      /* v1.1.4: real official asset logos, bundled locally in asset-icons/. */
+      .asset-logo{border-radius:50%;flex:none;object-fit:cover;display:inline-block;vertical-align:middle}
+      .asset-logo--card{width:20px;height:20px}
+      .asset-logo--tab{width:18px;height:18px}
+      .asset-logo--ticker{width:16px;height:16px}
+      .asset-logo--feat{width:28px;height:28px}
+      .watch-item .wq .asset-logo{margin-right:8px}
 
       /* forecast */
       .fc{font-size:13.5px;line-height:1.5;color:#3d3a34;padding-top:9px;margin:0}
@@ -316,6 +327,29 @@
       .trade-amount input{flex:1;border:1.5px solid var(--hair);border-radius:10px;padding:12px 14px;font-size:15px;font-family:var(--mono);color:var(--black);min-height:48px;background:var(--card-2)}
       .trade-panel .btn{width:100%;min-height:52px;font-size:15px;border-radius:10px}
       .trade-panel .trade-note{text-align:center;font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;color:var(--grey);margin:10px 0 0}
+      .trade-sides{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+      .trade-side{width:100%;min-height:48px;font-size:14px;border-radius:10px;color:var(--white);border:1.5px solid}
+      .trade-side.buy{background:var(--bid);border-color:var(--bid)}
+      .trade-side.sell{background:var(--ask);border-color:var(--ask)}
+      .trade-side.on{box-shadow:0 0 0 2px var(--black);filter:brightness(1.1)}
+      .trade-status{margin:10px 0 0;font-size:13.5px;line-height:1.5;color:var(--black);background:var(--card-2);border:1.5px solid var(--hair);border-radius:10px;padding:12px 14px;word-break:break-word}
+      .wallet-pill{display:inline-flex;align-items:center;gap:10px;border:1.5px solid var(--black);border-radius:999px;padding:8px 14px;font-family:var(--mono);font-size:12.5px;font-weight:700;background:var(--white);color:var(--black);max-width:230px;overflow:hidden;white-space:nowrap}
+      .wallet-pill .wallet-bal{color:var(--grey);font-weight:600}
+      .pos-row{display:flex;justify-content:space-between;align-items:center;gap:12px;border:1.5px solid var(--hair);border-radius:12px;background:var(--card);padding:14px 16px;margin-bottom:10px;flex-wrap:wrap}
+      .pos-row .pos-q{font-weight:800;font-size:15px}
+      .pos-row .pos-m{font-family:var(--mono);font-size:12px;color:var(--grey);margin-top:3px}
+      .pos-row .btn{min-height:44px;padding:10px 18px;font-size:13.5px}
+      .modal{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+      .modal-card{background:var(--white);border:1.5px solid var(--black);border-radius:16px;padding:22px;max-width:480px;width:100%;max-height:88vh;overflow:auto}
+      .modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+      .modal-head h3{font-family:var(--sans);font-size:20px;font-weight:800;margin:0}
+      .modal-text{font-size:14px;line-height:1.55;color:#3d3a34;margin:0 0 14px}
+      .modal-label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--grey);margin:12px 0 6px}
+      .modal-card input,.modal-card select{width:100%;border:1.5px solid var(--hair);border-radius:10px;padding:12px 14px;font-size:15px;font-family:var(--mono);color:var(--black);min-height:48px;background:var(--card-2);box-sizing:border-box}
+      .modal-card .btn{width:100%;min-height:52px;font-size:15px;border-radius:10px;margin-top:12px}
+      .modal-fee{margin-top:12px;font-family:var(--mono);font-size:12.5px;line-height:1.6;color:var(--black);background:var(--card-2);border:1.5px solid var(--hair);border-radius:10px;padding:12px 14px;word-break:break-word}
+      .modal-status{margin:12px 0 0;font-size:13.5px;line-height:1.55;color:var(--black);background:var(--card-2);border:1.5px solid var(--hair);border-radius:10px;padding:12px 14px;word-break:break-word}
+      .modal-note{margin:12px 0 0;font-family:var(--mono);font-size:11.5px;line-height:1.6;letter-spacing:.02em;color:var(--grey)}
 
       /* error state */
       .error-box{border:1.5px solid var(--black);border-radius:12px;background:var(--card);padding:28px 24px;text-align:center;margin-top:18px}
@@ -386,6 +420,8 @@
       .foot-links{display:flex;gap:22px;flex-wrap:wrap}
       .foot-links button{background:none;border:0;font-size:14px;font-weight:600;text-decoration:none;padding:6px 2px;min-height:40px;color:var(--white)}
       .foot-links button:hover{text-decoration:underline}
+      .foot-links a{background:none;border:0;font-size:14px;font-weight:600;text-decoration:none;padding:6px 2px;min-height:40px;color:var(--white);display:inline-flex;align-items:center}
+      .foot-links a:hover{text-decoration:underline}
       footer .brand-name{color:var(--white)}
       .foot-tag{font-size:14px;color:rgba(255,255,255,.65);align-self:center}
       .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(16px);opacity:0;visibility:hidden;background:var(--black);color:var(--white);border-radius:10px;padding:13px 20px;font-size:14px;font-weight:600;z-index:300;transition:transform .25s ease,opacity .25s ease,visibility .25s;max-width:92vw;text-align:center;border:1px solid var(--black)}
@@ -500,9 +536,9 @@
     <!-- nav -->
     <header class="nav">
       <div class="nav-in">
-        <a class="brand" href="#" data-nav="home" aria-label="prognosis home">
-          <img src="logo-light.png" width="34" height="34" alt="prognosis logo" />
-          <span class="brand-name">prognosis</span>
+        <a class="brand" href="#" data-nav="home" aria-label="prognos labs home">
+          <img src="logo-light.png" width="34" height="34" alt="prognos labs logo" />
+          <span class="brand-name">prognos labs</span>
         </a>
         <nav class="nav-links" aria-label="Primary">
           <button type="button" data-nav="home" class="on">Markets</button>
@@ -512,8 +548,10 @@
         </nav>
         <div class="nav-right">
           <button type="button" class="icon-btn nav-bell" id="bellBtn" aria-label="Price alerts" title="Price alerts"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></button>
-          <button type="button" class="btn btn-black nav-auth" id="signInBtn">Sign in</button>
-          <button type="button" class="btn btn-lime nav-auth" id="createBtn">Create account</button>
+          <span class="wallet-pill" id="walletPill" style="display:none"><span id="walletAddr"></span><span class="wallet-bal" id="walletBal"></span></span>
+          <button type="button" class="btn btn-lime nav-auth" id="linkBtn" style="display:none">Link wallet</button>
+          <button type="button" class="btn btn-black nav-auth" id="depositBtn" style="display:none">Deposit</button>
+          <button type="button" class="btn btn-lime nav-auth" id="createBtn">Connect wallet</button>
           <button type="button" class="icon-btn nav-menu" id="menuBtn" aria-label="Menu">☰</button>
         </div>
       </div>
@@ -524,8 +562,7 @@
       <button type="button" data-nav="watchlist">Watchlist</button>
       <button type="button" data-nav="news">News</button>
       <button type="button" data-nav="docs">Documentation</button>
-      <button type="button" class="btn btn-black" id="mSignInBtn">Sign in</button>
-      <button type="button" class="btn btn-lime" id="mCreateBtn">Create account</button>
+      <button type="button" class="btn btn-lime" id="mCreateBtn">Connect wallet</button>
     </div>
 
     <div class="ticker" id="ticker" style="display:none" aria-label="Asset prices">
@@ -539,7 +576,7 @@
           <div class="page-head page-head--row">
             <div>
               <h1 class="page-title">Trade the question.</h1>
-              <p class="page-sub">Prognosis is a prediction market. Each market asks one question about what happens next. The price shows the chance traders give the event, and it moves with every trade. When the event ends, the market settles on the real outcome.</p>
+              <p class="page-sub">Prognos Labs is a prediction market. Each market asks one question about what happens next. The price shows the chance traders give the event, and it moves with every trade. When the event ends, the market settles on the real outcome.</p>
             </div>
             <button type="button" class="icon-btn" id="refreshBtn" aria-label="Refresh prices" title="Refresh prices">↻</button>
           </div>
@@ -553,7 +590,7 @@
           <div class="feat" id="featBox">
             <div class="feat-ribbon" aria-hidden="true"><img src="logo-dark.png" alt="" /></div>
             <div class="feat-top">
-              <span class="pill">FEATURED</span>
+              <span style="display:inline-flex;align-items:center;gap:10px"><img id="featLogo" class="asset-logo asset-logo--feat" src="" alt="" style="display:none" /><span class="pill">FEATURED</span></span>
               <span class="sec-note" id="featCountdown"></span>
               <span class="pill" id="featStatus">LOADING</span>
             </div>
@@ -589,9 +626,9 @@
                 <div class="meta-cell"><div class="k">WIN LINE</div><div class="v" id="featWinLine">…</div></div>
               </div>
               <div class="trade-locked">
-                <button type="button" class="btn btn-locked" disabled><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Buy Up · <span id="featBuyUp">…</span></button>
-                <button type="button" class="btn btn-locked" disabled><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Buy Down · <span id="featBuyDown">…</span></button>
-                <p class="trade-note">TRADING OPENS SOON · WATCHING AND FORECASTS ARE LIVE NOW</p>
+                <button type="button" class="btn btn-buy" id="featBuyUpBtn">Buy Up · <span id="featBuyUp">…</span></button>
+                <button type="button" class="btn btn-sell" id="featBuyDownBtn">Sell Down · <span id="featBuyDown">…</span></button>
+                <p class="trade-note">CONNECT YOUR WALLET TO TRADE · YOUR FUNDS STAY IN YOUR WALLET UNTIL YOU DEPOSIT</p>
               </div>
             </div>
           </div>
@@ -623,7 +660,7 @@
             <div class="step"><div class="num"><i>3</i></div><h3>See how it settles</h3><p>When the event ends, the market settles on the real outcome, from the source stated on the market page. The side that called it right is the winning side.</p></div>
           </div>
           <div class="doc-cta">
-            <div><h3>Documentation</h3><p>What Prognosis is, what it offers and how it works, and the terms, in plain words.</p></div>
+            <div><h3>Documentation</h3><p>What Prognos Labs is, what it offers and how it works, and the terms, in plain words.</p></div>
             <button type="button" class="btn btn-black" data-nav="docs">Read the documentation →</button>
           </div>
           <div class="spacer-56"></div>
@@ -649,6 +686,7 @@
           <div class="mkt-single">
             <div class="page-head">
               <button type="button" class="back-btn" data-nav="home">← All markets</button>
+              <div id="mAssetRow" style="display:none;align-items:center;gap:10px;margin-bottom:10px"><img id="mLogo" class="asset-logo asset-logo--feat" src="" alt="" /><span class="sec-note" id="mAssetName"></span></div>
               <h1 class="mkt-q" id="mQ">Market</h1>
               <div class="market-status-row">
                 <span class="pill" id="mStatus">LOADING</span>
@@ -691,17 +729,22 @@
 
               <div class="trade-panel" id="tradePanel">
                 <h3>Trade this market</h3>
-                <p class="trade-sub">Buy Up or Down. Trading has not opened yet.</p>
+                <p class="trade-sub" id="tradeSub">Pick a side and an amount in USDT, then buy or sell. Connect your wallet and link it first.</p>
                 <div class="trade-prices">
                   <div class="trade-price up"><div class="l" id="tradeL0">UP</div><div class="p" id="tradeP0">…</div></div>
                   <div class="trade-price down"><div class="l" id="tradeL1">DOWN</div><div class="p" id="tradeP1">…</div></div>
                 </div>
-                <div class="trade-amount">
-                  <label for="tradeAmount">AMOUNT</label>
-                  <input type="text" id="tradeAmount" value="0.00" disabled aria-label="Amount" />
+                <div class="trade-sides" role="group" aria-label="Choose a side">
+                  <button type="button" class="btn trade-side buy on" id="tradeSide0">Buy <span id="tradeSideL0">Up</span></button>
+                  <button type="button" class="btn trade-side sell" id="tradeSide1">Sell <span id="tradeSideL1">Down</span></button>
                 </div>
-                <button type="button" class="btn btn-black" disabled><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Trading opens soon</button>
-                <p class="trade-note">TRADING OPENS SOON · WATCHING AND FORECASTS ARE LIVE NOW</p>
+                <div class="trade-amount">
+                  <label for="tradeAmount">AMOUNT (USDT)</label>
+                  <input type="text" id="tradeAmount" value="" placeholder="10.00" inputmode="decimal" aria-label="Amount in USDT" />
+                </div>
+                <button type="button" class="btn btn-buy" id="tradeBuyBtn">Buy</button>
+                <p class="trade-note" id="tradeNote">YOUR ORDER GOES TO THE LIVE ORDER BOOK AT THE CURRENT PRICE.</p>
+                <p class="trade-status" id="tradeStatus" style="display:none"></p>
               </div>
 
               <div class="books" id="mBooks">
@@ -729,7 +772,14 @@
             <h1 class="page-title">Markets you are watching.</h1>
             <p class="page-sub">Star a market to keep it here.</p>
           </div>
-          <p class="watch-note"><b>There are no positions here.</b> Trading has not opened yet, so this is a watchlist only. When trading opens, your positions will show here too.</p>
+          <div id="posSection">
+            <div class="sec-head">
+              <h2 class="sec-title">Your positions</h2>
+              <span class="sec-note" id="posBalance">CONNECT YOUR WALLET TO SEE YOUR BALANCE AND POSITIONS</span>
+            </div>
+            <div id="posBox"><div class="quiet">Connect your wallet to see your balance and positions.</div></div>
+          </div>
+          <p class="watch-note">Star a market to keep it here. Your positions show above once you have traded.</p>
           <div class="sec-head">
             <h2 class="sec-title">Alerts</h2>
             <span class="sec-note">PRICE MOVES · TIME LEFT · PRICE ALERTS</span>
@@ -750,14 +800,14 @@
           <div class="page-head">
             <button type="button" class="back-btn" data-nav="home">← Markets</button>
             <h1 class="page-title">Documentation.</h1>
-            <p class="page-sub">How Prognosis works, what the forecast does for you, and the terms. Written in plain words, nothing hidden.</p>
+            <p class="page-sub">How Prognos Labs works, what the forecast does for you, and the terms. Written in plain words, nothing hidden.</p>
           </div>
 
           <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><filter id="docGrain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="matrix" values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.05 0"/></filter></defs></svg>
           <div class="docs-layout">
             <nav class="docs-nav" aria-label="Documentation sections">
               <h3>ON THIS PAGE</h3>
-              <a href="#doc-what" data-doc="doc-what" class="on">What Prognosis is about</a>
+              <a href="#doc-what" data-doc="doc-what" class="on">What Prognos Labs is about</a>
               <a href="#doc-how" data-doc="doc-how">What it offers, and how it works</a>
               <a href="#doc-forecast" data-doc="doc-forecast">How the forecast is worked out</a>
               <a href="#doc-learn" data-doc="doc-learn">How the forecast learns</a>
@@ -768,15 +818,15 @@
               <div class="doc-callout"><b>A person decides every outcome.</b> The forecast never creates a market and never settles one.</div>
 
               <div class="doc-sec" id="doc-what">
-                <h2>What Prognosis is about</h2>
-                <p>Prognosis is a prediction market with AI models built in. Every market asks one question about what happens next, with two outcomes. You follow the outcome you think will happen, and the price shows the chance traders give it. A price of 62% means the market, as a whole, puts the chance at about 62 in 100. The price is never set by us. It moves with every trade, as traders buy and sell and the balance of opinion shifts.</p>
-                <p>Most prediction markets show you a price and leave you to guess what it means. Prognosis does more. Every market carries a forecast from its AI models, with a plain-language reason for it. The models read the live order book, the spread, the time left and the volume, and they tell you, in words, which way the market leans and why. And they keep learning. Every time a market settles, the forecast it gave is scored against the real outcome, so the next forecast is sharper than the last. That is the whole point of Prognosis: a market that does not just show you the odds, it helps you read them.</p>
+                <h2>What Prognos Labs is about</h2>
+                <p>Prognos Labs is a prediction market with AI models built in. Every market asks one question about what happens next, with two outcomes. You follow the outcome you think will happen, and the price shows the chance traders give it. A price of 62% means the market, as a whole, puts the chance at about 62 in 100. The price is never set by us. It moves with every trade, as traders buy and sell and the balance of opinion shifts.</p>
+                <p>Most prediction markets show you a price and leave you to guess what it means. Prognos Labs does more. Every market carries a forecast from its AI models, with a plain-language reason for it. The models read the live price move, the headlines, the mood, the order book and the time left, and they tell you, in words, what the market looks like and what comes next. They never tell you which side to pick. And they keep learning. Every time a market settles, the forecast it gave is scored against the real outcome, so the next forecast is sharper than the last. That is the whole point of Prognos Labs: a market that does not just show you the odds, it helps you read them.</p>
                 <p>Right now the markets are short crypto moves: up or down over the next few minutes. New questions arrive through the day, and the forecast is live on every one of them.</p>
               </div>
 
               <div class="doc-sec" id="doc-how">
-                <h2>What Prognosis offers, and how it works</h2>
-                <p>A market on Prognosis is simple on the surface and open underneath. Here is how one moves, from the question to the settlement.</p>
+                <h2>What Prognos Labs offers, and how it works</h2>
+                <p>A market on Prognos Labs is simple on the surface and open underneath. Here is how one moves, from the question to the settlement.</p>
                 <div class="doc-graphic">
                   <svg class="doc-grain" aria-hidden="true"><rect width="100%" height="100%" filter="url(#docGrain)"/></svg>
                   <div class="flow-line"></div>
@@ -806,7 +856,7 @@
 
               <div class="doc-sec" id="doc-forecast">
                 <h2>How the forecast is worked out</h2>
-                <p>Every market carries a forecast. It is worked out from the market itself, in four plain steps. Nothing is guessed, and nothing is hidden: you can check each step against the order book yourself.</p>
+                <p>Every market carries a forecast. It is a short note on what the market looks like right now, written from the market itself, in four plain steps. Nothing is guessed, and nothing is hidden: you can check each step against the market yourself.</p>
                 <div class="doc-graphic">
                   <svg class="doc-grain" aria-hidden="true"><rect width="100%" height="100%" filter="url(#docGrain)"/></svg>
                   <div class="fc-graphic">
@@ -820,20 +870,20 @@
                     <div class="fc-arrow"><svg width="26" height="16" viewBox="0 0 26 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 8h22M17 2l6 6-6 6"/></svg></div>
                     <div class="mini-fc">
                       <span class="pill">FORECAST</span>
-                      <b>Up, 62%</b>
-                      <p>Price is holding above the win line with under 4 minutes left and the spread is tight, so one trade is unlikely to flip it.</p>
+                      <b>Tense</b>
+                      <p>Bitcoin is under pressure, down about 2.6% on the day, and the mood in the headlines is heavy. With five minutes left, what comes next is a test of whether buyers step in or the slide carries on.</p>
                     </div>
                   </div>
                 </div>
-                <h3>The live price</h3>
-                <p>The forecast starts from the middle of the best bid and the best ask. A price near 50% means the market has not picked a side yet. Above 60% it leans one way, below 40% it leans the other.</p>
-                <h3>The spread</h3>
-                <p>A wide gap between the best bid and ask means the price can move further on a single trade, so the forecast says so. A tight gap means the price is firm.</p>
+                <h3>The price move</h3>
+                <p>The forecast reads how the asset has moved, from the live price feed. A sharp move in a day, or over the last hour, is the first thing it notes. When the asset has barely moved, it says that too.</p>
+                <h3>The headlines and the mood</h3>
+                <p>It reads the latest headlines about the asset and the mood across the news in the last hour. When the headlines are heavy, it says so. When there is no news about the asset, it says nothing about news, rather than inventing a story.</p>
+                <h3>The order book</h3>
+                <p>It looks at the money sitting in the book, but it only names a level when it is big enough to matter, at least $1,000 at one price. A thin book is skipped, never dressed up as a wall, because a few hundred dollars cannot push a prediction market.</p>
                 <h3>The time left</h3>
-                <p>On a market with only a few minutes left, one trade can turn the price. With hours left, there is room for the price to come back. The forecast weighs the time left on every market it reads.</p>
-                <h3>The volume</h3>
-                <p>When no trades have happened yet, the price is quotes only, not trades, and the forecast says that plainly. When volume is building, the forecast reads it as the market getting surer of itself.</p>
-                <p>The forecast is a read of the market, not a promise about the outcome. It tells you which way the market leans and why, in words you can check against the order book yourself. It never creates a market and it never decides one.</p>
+                <p>On a market with only a few minutes left, the next move decides it. With hours or days left, there is room for the picture to change. The forecast weighs the time left on every market it reads, and ends on what comes next for the asset.</p>
+                <p>The forecast is a read of the market, not a promise about the outcome. It never tells you which side to pick. It never creates a market and it never decides one.</p>
               </div>
 
               <div class="doc-sec" id="doc-learn">
@@ -884,7 +934,7 @@
                   <li><b>Prices move.</b> A price is the market's view at a moment in time. It can move quickly, especially on short markets with little time left, and a price is never a promise about the outcome.</li>
                   <li><b>The forecast is a read of the market, not a promise.</b> It is worked out from the price, the spread, the time left and the volume. It never decides a market.</li>
                   <li><b>The forecast learns from past results.</b> It records the forecast it showed, scores it against the real outcome when the market ends, and only changes when past results show a better way.</li>
-                  <li><b>Trading opens soon.</b> Watching, forecasts, alerts and the watchlist are live now. Trading, deposits and withdrawals open with trading, and this page will say so when they do.</li>
+                  <li><b>Trading is live.</b> Connect your wallet, link it with a free signature, deposit USDT, and buy or sell either side of a market. Your balance and positions show in your watchlist. Deposits run onchain through your own wallet.</li>
                 </ul>
               </div>
             </div>
@@ -899,18 +949,47 @@
       <div class="wrap">
         <div class="foot-in">
           <a class="brand" href="#" data-nav="home">
-            <img src="logo-dark.png" width="30" height="30" alt="prognosis logo" />
-            <span class="brand-name">prognosis</span>
+            <img src="logo-dark.png" width="30" height="30" alt="prognos labs logo" />
+            <span class="brand-name">prognos labs</span>
           </a>
           <span class="foot-tag">Trade the question.</span>
           <nav class="foot-links" aria-label="Footer">
             <button type="button" data-nav="home">Markets</button>
             <button type="button" data-nav="news">News</button>
             <button type="button" data-nav="docs">Documentation</button>
+            <a href="mailto:contact@prognoslabs.xyz">contact@prognoslabs.xyz</a>
+            <a href="https://x.com/prognos_labs" target="_blank" rel="noopener">@prognos_labs</a>
+            <a href="https://github.com/SelfEgo/prognos-labs" target="_blank" rel="noopener">GitHub</a>
           </nav>
         </div>
       </div>
     </footer>
+
+    <!-- deposit -->
+    <div class="modal" id="depositModal" style="display:none" role="dialog" aria-label="Deposit USDT" aria-modal="true">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3>Deposit USDT</h3>
+          <button type="button" class="icon-btn" id="depositClose" aria-label="Close">✕</button>
+        </div>
+        <p class="modal-text">Deposit USDT from your wallet into your Prognos Vault. You trade from that balance.</p>
+        <label class="modal-label" for="depAmount">AMOUNT (USDT)</label>
+        <input type="text" id="depAmount" placeholder="10.00" inputmode="decimal" aria-label="Deposit amount in USDT" />
+        <label class="modal-label" for="depChain">NETWORK</label>
+        <select id="depChain" aria-label="Network">
+          <option value="bsc">BNB Smart Chain (BSC)</option>
+          <option value="ethereum">Ethereum</option>
+          <option value="arbitrum">Arbitrum</option>
+          <option value="base">Base</option>
+          <option value="solana">Solana</option>
+        </select>
+        <div class="modal-fee" id="depFee" style="display:none"></div>
+        <button type="button" class="btn btn-black" id="depQuoteBtn">See the fee</button>
+        <button type="button" class="btn btn-lime" id="depSendBtn" style="display:none">Send the deposit</button>
+        <p class="modal-status" id="depStatus" style="display:none"></p>
+        <p class="modal-note">Your wallet will ask you to confirm the deposit onchain. Keep the page open until it confirms, then your balance updates.</p>
+      </div>
+    </div>
 
     <nav class="mobile-nav" aria-label="Mobile">
       <button type="button" data-nav="home" class="on">Markets</button>
@@ -948,10 +1027,21 @@
       prevPrices: {},
       flashDone: {}, /* already flashed this cycle */
       tickerLoaded: false,
+      ticker: null, /* live price feed assets, each with a 24h move; the forecast reads it */
+      news: null, /* latest headlines with asset tags and the mood count; the forecast reads it */
       sector: null, /* null = biggest sector */
       query: "",
       shown: 6, /* cards shown on the home grid before Show more */
-      homeAnimate: false
+      homeAnimate: false,
+      wallet: null, /* connected wallet address (0x…) or null */
+      walletLinked: false, /* wallet linked to Prognos Labs by a free signature */
+      session: null, /* trading session token issued on link, valid 24h; sent with every wallet-scoped trading call */
+      walletBal: null, /* Vault balance in USDT, as returned by Prognos Labs */
+      walletPos: null, /* positions list from Prognos Labs, or null */
+      walletPosAt: 0,
+      tradeSide: 0, /* 0 = buy outcome 0, 1 = buy outcome 1 */
+      tradeBusy: false,
+      depQuote: null /* last deposit fee quote {native_fee, lz_fee} */
     };
 
     /* helpers */
@@ -1041,13 +1131,462 @@
     }
 
     /* api */
+    function apiErr(msg, action){
+      var e = new Error(msg || "Bad response");
+      if (action) e.action = action;
+      return e;
+    }
     function api(path){
       return fetch(path, {headers: {"Accept": "application/json"}}).then(function(r){
         if (!r.ok) throw new Error("HTTP " + r.status);
         return r.json();
       }).then(function(j){
-        if (!j || j.error) throw new Error((j && j.error) || "Bad response");
+        if (!j || j.error) throw apiErr(j && j.error, j && j.action);
         return j;
+      });
+    }
+    function apiPost(path, body){
+      return fetch(path, {method: "POST", headers: {"Accept": "application/json", "Content-Type": "application/json"}, body: JSON.stringify(body)}).then(function(r){
+        return r.json().then(function(j){
+          if (!r.ok || !j || j.error) throw apiErr(j && j.error, j && j.action);
+          return j;
+        });
+      });
+    }
+
+    /* wallet and trading */
+    function shortAddr(a){
+      if (!a) return "";
+      return a.slice(0, 6) + "…" + a.slice(-4);
+    }
+    function isEvmAddr(a){
+      return typeof a === "string" && /^0x[0-9a-fA-F]{40}$/.test(a);
+    }
+    function setWalletUI(){
+      var pill = $("walletPill"), dep = $("depositBtn"), lk = $("linkBtn");
+      var si = $("signInBtn"), cr = $("createBtn");
+      if (S.wallet){
+        if (pill) { pill.style.display = ""; $("walletAddr").textContent = shortAddr(S.wallet); }
+        if (dep) dep.style.display = "";
+        if (lk) lk.style.display = S.walletLinked ? "none" : "";
+        if (si) si.style.display = "none";
+        if (cr) cr.style.display = "none";
+        var bal = (S.walletBal === null || S.walletBal === undefined) ? "" : " · $" + Number(S.walletBal).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        var wb = $("walletBal"); if (wb) wb.textContent = bal;
+      } else {
+        if (pill) pill.style.display = "none";
+        if (dep) dep.style.display = "none";
+        if (lk) lk.style.display = "none";
+        if (si) si.style.display = "";
+        if (cr) cr.style.display = "";
+      }
+    }
+    /* The link message the wallet signs. A free signature, no transaction,
+     * no gas, no funds moved. The server recovers the signer and records
+     * the wallet as linked. The message carries a single-use nonce from
+     * the server, so a leaked or phished signature cannot be replayed. */
+    function linkMessageText(nonce){ return "Link this wallet to Prognos Labs\nNonce: " + nonce; }
+    function checkLinkStatus(){
+      if (!S.wallet) return Promise.resolve(false);
+      return api("api.php?action=link_status&address=" + encodeURIComponent(S.wallet)).then(function(j){
+        S.walletLinked = !!(j && j.linked);
+        setWalletUI();
+        return S.walletLinked;
+      }).catch(function(){
+        S.walletLinked = false;
+        setWalletUI();
+        return false;
+      });
+    }
+    /* The nonce the Prognos Labs app asked for, when this page was
+     * opened from the app (?app_link_nonce=...). The app fetched it
+     * from the server and passes it here so the signature it gets back
+     * is the one the app is waiting for. Without it the app cannot
+     * tell which link the signature belongs to. */
+    function appLinkNonce(){
+      try {
+        var m = new URLSearchParams(window.location.search).get("app_link_nonce");
+        return (m && /^[0-9a-fA-F]{32,128}$/.test(m)) ? m : null;
+      } catch (e) { return null; }
+    }
+    function linkWallet(){
+      if (!S.wallet) return connectWallet().then(function(){ if (S.wallet) return linkWallet(); return null; });
+      if (!window.ethereum || !window.ethereum.request){
+        toast("No wallet found. Open this page in MetaMask, or install MetaMask and try again.");
+        return Promise.resolve(null);
+      }
+      /* Single-use nonce first, then sign the message that carries it.
+       * Without the nonce a leaked signature could be replayed. When
+       * the app opened this page it already fetched a nonce, so use
+       * that one; otherwise fetch a fresh one from the server. */
+      var appNonce = appLinkNonce();
+      var noncePromise = appNonce
+        ? Promise.resolve({nonce: appNonce})
+        : api("api.php?action=link_nonce");
+      return noncePromise.then(function(nj){
+        var nonce = nj && nj.nonce;
+        if (!nonce){
+          toast("The link could not be started. Please try again.");
+          return null;
+        }
+        var msg = linkMessageText(nonce);
+        var hex = "0x" + Array.prototype.map.call(new TextEncoder().encode(msg), function(b){
+          return ("0" + b.toString(16)).slice(-2);
+        }).join("");
+        toast("Please sign the message in your wallet to link it. No transaction, no gas.");
+        return window.ethereum.request({method: "personal_sign", params: [hex, S.wallet]}).then(function(sig){
+          return apiPost("api.php?action=link_wallet", {address: S.wallet, message: msg, signature: sig}).then(function(j){
+            S.walletLinked = !!(j && j.linked);
+            if (j && j.session) {
+              S.session = j.session;
+              try { localStorage.setItem("prognos-session-v1", JSON.stringify({address: S.wallet, session: j.session})); } catch (e) {}
+            }
+            setWalletUI();
+            if (S.walletLinked) {
+              /* The link was started from the app: hand the session
+               * back so the app can unlock trading for this wallet. */
+              if (appNonce && j && j.session) {
+                window.location.href = "/linked?session=" + encodeURIComponent(j.session) + "&address=" + encodeURIComponent(S.wallet);
+                return true;
+              }
+              toast("<b>Wallet linked.</b> You can deposit USDT to start trading.");
+            }
+            return S.walletLinked;
+          });
+        });
+      }).catch(function(err){
+        var msg2 = (err && err.message) ? err.message : "The link request was not completed.";
+        toast(esc(msg2));
+        return null;
+      });
+    }
+    function connectWallet(){
+      if (!window.ethereum || !window.ethereum.request){
+        toast("No wallet found. Open this page in MetaMask, or install MetaMask and try again.");
+        return Promise.resolve(null);
+      }
+      return window.ethereum.request({method: "eth_requestAccounts"}).then(function(accs){
+        if (!accs || !accs.length || !isEvmAddr(accs[0])){
+          toast("Could not read a wallet address. Try again.");
+          return null;
+        }
+        S.wallet = accs[0];
+        S.walletLinked = false;
+        try { localStorage.setItem("prognos-wallet-v1", S.wallet); } catch (e) {}
+        setWalletUI();
+        toast("<b>Wallet connected.</b> " + esc(shortAddr(S.wallet)));
+        checkLinkStatus();
+        loadBalance();
+        loadPositions();
+        return S.wallet;
+      }).catch(function(err){
+        var msg = (err && err.message) ? err.message : "The wallet request was not completed.";
+        toast(esc(msg));
+        return null;
+      });
+    }
+    function ensureWallet(){
+      if (S.wallet) return Promise.resolve(S.wallet);
+      return connectWallet();
+    }
+    function loadBalance(){
+      if (!S.wallet) return Promise.resolve(null);
+      var u = "api.php?action=balance&address=" + encodeURIComponent(S.wallet);
+      if (S.session) u += "&session=" + encodeURIComponent(S.session);
+      return api(u).then(function(j){
+        var d = (j && j.data) ? j.data : j;
+        var avail = null;
+        if (d){
+          if (d.available !== undefined && d.available !== null) avail = d.available;
+          else if (d.balance !== undefined && d.balance !== null) avail = d.balance;
+        }
+        S.walletBal = (avail === null || avail === undefined) ? null : String(avail);
+        setWalletUI();
+        var pb = $("posBalance");
+        if (pb) pb.textContent = S.walletBal === null ? "BALANCE NOT AVAILABLE YET" : "VAULT BALANCE $" + Number(S.walletBal).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        return S.walletBal;
+      }).catch(function(){
+        S.walletBal = null;
+        setWalletUI();
+        return null;
+      });
+    }
+    function loadPositions(){
+      if (!S.wallet) return Promise.resolve(null);
+      var u = "api.php?action=positions&address=" + encodeURIComponent(S.wallet) + "&limit=50";
+      if (S.session) u += "&session=" + encodeURIComponent(S.session);
+      return api(u).then(function(j){
+        var items = (j && j.items) ? j.items : (j && j.data && j.data.items) ? j.data.items : [];
+        S.walletPos = items;
+        S.walletPosAt = Date.now();
+        renderPositions();
+        return items;
+      }).catch(function(){
+        S.walletPos = null;
+        renderPositions();
+        return null;
+      });
+    }
+    function renderPositions(){
+      var box = $("posBox");
+      if (!box) return;
+      if (!S.wallet){
+        box.innerHTML = '<div class="quiet">Connect your wallet to see your balance and positions.</div>';
+        return;
+      }
+      var items = S.walletPos || [];
+      if (!items.length){
+        box.innerHTML = '<div class="quiet">No open positions yet. Buy either side of a market and it will show here.</div>';
+        return;
+      }
+      var html = "";
+      items.forEach(function(p){
+        var q = (p.quantity !== undefined && p.quantity !== null) ? p.quantity : (p.size || "");
+        var tok = p.token_id || p.tokenId || "";
+        var out = p.outcome || p.outcome_label || "";
+        var avg = (p.average_price !== undefined && p.average_price !== null) ? p.average_price : (p.avg_price || "");
+        var ev = p.event_id || p.condition_id || "";
+        html += '<div class="pos-row"><div><div class="pos-q">' + esc(String(out || tok)) + ' · ' + esc(String(q)) + '</div>' +
+          '<div class="pos-m">' + esc(String(ev)) + (avg !== "" ? ' · AVG ' + esc(String(avg)) : '') + '</div></div>' +
+          '<button type="button" class="btn btn-sell" data-sell-token="' + esc(String(tok)) + '">Sell all</button></div>';
+      });
+      box.innerHTML = html;
+      box.querySelectorAll("[data-sell-token]").forEach(function(b){
+        b.addEventListener("click", function(){
+          sellPosition(b.getAttribute("data-sell-token"), b);
+        });
+      });
+    }
+    function sellPosition(tokenId, btn){
+      if (!tokenId) return;
+      ensureWallet().then(function(w){
+        if (!w) return;
+        if (btn) { btn.disabled = true; btn.textContent = "Selling…"; }
+        return apiPost("api.php?action=place_order", {
+          address: w, session: S.session || "", token_id: tokenId, side: "SELL", order_mode: "MARKET",
+          order_type: "GTC", sell_all: true, total_cost: "0.01"
+        }).then(function(j){
+          toast("<b>Sell order placed.</b> Order " + esc((j && j.order_id) || (j && j.data && j.data.order_id) || "") + ". It may take a moment to fill.");
+          loadBalance(); loadPositions();
+        }).catch(function(err){
+          toast(esc(err.message || "The sell order could not be placed."));
+        }).then(function(){
+          if (btn) { btn.disabled = false; btn.textContent = "Sell all"; }
+        });
+      });
+    }
+    function setTradeSide(i){
+      S.tradeSide = i ? 1 : 0;
+      var b0 = $("tradeSide0"), b1 = $("tradeSide1");
+      if (b0) b0.classList.toggle("on", S.tradeSide === 0);
+      if (b1) b1.classList.toggle("on", S.tradeSide === 1);
+      var m = cur();
+      if (m){
+        var l0 = $("tradeSideL0"), l1 = $("tradeSideL1");
+        if (l0) l0.textContent = m.outcomes[0].label;
+        if (l1) l1.textContent = m.outcomes[1].label;
+      }
+      var cb = $("tradeBuyBtn");
+      if (cb){
+        if (S.tradeSide === 0){ cb.textContent = "Buy"; cb.classList.remove("btn-sell"); cb.classList.add("btn-buy"); }
+        else { cb.textContent = "Sell"; cb.classList.remove("btn-buy"); cb.classList.add("btn-sell"); }
+      }
+    }
+    function tradeStatus(msg, ok){
+      var el = $("tradeStatus");
+      if (!el) return;
+      if (!msg){ el.style.display = "none"; el.textContent = ""; return; }
+      el.style.display = "";
+      el.textContent = msg;
+    }
+    /* Show a status message with an action button (Link wallet or Deposit)
+     * when the server says what to do next. */
+    function tradeStatusAction(msg, action){
+      var el = $("tradeStatus");
+      if (!el) return;
+      if (!msg){ el.style.display = "none"; el.textContent = ""; return; }
+      el.style.display = "";
+      el.textContent = "";
+      var span = document.createElement("span");
+      span.textContent = msg;
+      el.appendChild(span);
+      if (action === "link" || action === "deposit"){
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "btn " + (action === "link" ? "btn-lime" : "btn-black");
+        b.style.cssText = "min-height:38px;padding:6px 14px;font-size:13px;margin-left:10px";
+        b.textContent = action === "link" ? "Link wallet" : "Deposit";
+        b.addEventListener("click", function(){
+          if (action === "link") linkWallet();
+          else openDeposit();
+        });
+        el.appendChild(b);
+      }
+    }
+    function tradeConfirmLabel(){
+      return S.tradeSide === 0 ? "Buy" : "Sell";
+    }
+    function placeTrade(){
+      if (S.tradeBusy) return;
+      var m = cur();
+      if (!m){ toast("Open a market first."); return; }
+      var amtRaw = ($("tradeAmount").value || "").trim();
+      if (!/^\d+(\.\d{1,6})?$/.test(amtRaw) || Number(amtRaw) <= 0){
+        tradeStatus("Enter an amount in USDT, greater than zero.");
+        return;
+      }
+      var tok = m.outcomes[S.tradeSide] && m.outcomes[S.tradeSide].tokenId;
+      if (!tok){ tradeStatus("This market has no tradeable token for that side yet."); return; }
+      ensureWallet().then(function(w){
+        if (!w) return;
+        if (!S.walletLinked){
+          tradeStatusAction("Please link your wallet to Prognos Labs first.", "link");
+          return;
+        }
+        S.tradeBusy = true;
+        var btn = $("tradeBuyBtn");
+        if (btn) { btn.disabled = true; btn.textContent = "Placing order…"; }
+        tradeStatus("Placing your order…");
+        return apiPost("api.php?action=place_order", {
+          address: w, session: S.session || "", token_id: tok, side: "BUY", order_mode: "MARKET",
+          order_type: "GTC", total_cost: amtRaw
+        }).then(function(j){
+          var oid = (j && j.order_id) || (j && j.data && j.data.order_id) || "";
+          tradeStatus("Order placed" + (oid ? " (" + oid + ")" : "") + ". It may take a moment to fill. Your balance and positions will update.");
+          toast("<b>Order placed.</b> " + esc(tradeConfirmLabel() + " " + m.outcomes[S.tradeSide].label) + " for $" + esc(amtRaw) + ".");
+          loadBalance(); loadPositions();
+        }).catch(function(err){
+          if (err && err.action) tradeStatusAction(err.message || "The order could not be placed.", err.action);
+          else tradeStatus(err.message || "The order could not be placed.");
+        }).then(function(){
+          S.tradeBusy = false;
+          if (btn) { btn.disabled = false; btn.textContent = tradeConfirmLabel(); }
+        });
+      });
+    }
+    /* deposit */
+    function openDeposit(){
+      var md = $("depositModal");
+      if (!md) return;
+      if (!S.wallet){
+        connectWallet().then(function(w){ if (w) md.style.display = "flex"; });
+        return;
+      }
+      md.style.display = "flex";
+    }
+    function closeDeposit(){
+      var md = $("depositModal");
+      if (md) md.style.display = "none";
+      var st = $("depStatus"); if (st) { st.style.display = "none"; st.textContent = ""; }
+      var fee = $("depFee"); if (fee) { fee.style.display = "none"; fee.innerHTML = ""; }
+      var send = $("depSendBtn"); if (send) send.style.display = "none";
+      S.depQuote = null;
+    }
+    function depStatus(msg){
+      var el = $("depStatus");
+      if (!el) return;
+      if (!msg){ el.style.display = "none"; el.textContent = ""; return; }
+      el.style.display = "";
+      el.textContent = msg;
+    }
+    /* Deposit status with a Link wallet button when the server says the
+     * wallet needs linking first. */
+    function depStatusAction(msg, action){
+      var el = $("depStatus");
+      if (!el) return;
+      if (!msg){ el.style.display = "none"; el.textContent = ""; return; }
+      el.style.display = "";
+      el.textContent = "";
+      var span = document.createElement("span");
+      span.textContent = msg;
+      el.appendChild(span);
+      if (action === "link"){
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "btn btn-lime";
+        b.style.cssText = "min-height:38px;padding:6px 14px;font-size:13px;margin-left:10px";
+        b.textContent = "Link wallet";
+        b.addEventListener("click", function(){ linkWallet(); });
+        el.appendChild(b);
+      }
+    }
+    function depositQuote(){
+      if (!S.wallet){ connectWallet(); return; }
+      var amtRaw = ($("depAmount").value || "").trim();
+      if (!/^\d+(\.\d{1,6})?$/.test(amtRaw) || Number(amtRaw) <= 0){
+        depStatus("Enter an amount in USDT, greater than zero.");
+        return;
+      }
+      var chain = $("depChain").value;
+      var qb = $("depQuoteBtn");
+      if (qb) { qb.disabled = true; qb.textContent = "Getting the fee…"; }
+      depStatus("Getting the fee…");
+      apiPost("api.php?action=deposit_fee", {
+        address: S.wallet, session: S.session || "", chain: chain, token_amount: amtRaw
+      }).then(function(j){
+        var d = (j && j.data) ? j.data : j;
+        var nf = (d && d.native_fee !== undefined) ? d.native_fee : null;
+        var lz = (d && d.lz_fee !== undefined) ? d.lz_fee : null;
+        S.depQuote = {native_fee: nf, lz_fee: lz, amount: amtRaw, chain: chain};
+        var fee = $("depFee");
+        if (fee){
+          fee.style.display = "";
+          fee.textContent = "Fee estimate: native fee " + (nf === null ? "-" : nf) + " · bridging fee " + (lz === null ? "-" : lz) + " USDT. These are added to your deposit.";
+        }
+        var send = $("depSendBtn");
+        if (send) send.style.display = "";
+        depStatus("Fee ready. Send the deposit to move " + amtRaw + " USDT on " + chain + ".");
+      }).catch(function(err){
+        if (err && err.action) depStatusAction(err.message || "Could not get the fee. Try again.", err.action);
+        else depStatus(err.message || "Could not get the fee. Try again.");
+      }).then(function(){
+        if (qb) { qb.disabled = false; qb.textContent = "See the fee"; }
+      });
+    }
+    function depositSend(){
+      if (!S.wallet || !S.depQuote){
+        depStatus("Get the fee first, then send the deposit.");
+        return;
+      }
+      if (!window.ethereum || !window.ethereum.request){
+        depStatus("No wallet found. Open this page in MetaMask and try again.");
+        return;
+      }
+      var q = S.depQuote;
+      var sb = $("depSendBtn");
+      if (sb) { sb.disabled = true; sb.textContent = "Getting deposit details…"; }
+      depStatus("Getting the deposit details…");
+      apiPost("api.php?action=deposit_sign", {
+        address: S.wallet, session: S.session || "", chain: q.chain, token_amount: q.amount,
+        native_fee: q.native_fee, lz_fee: q.lz_fee
+      }).then(function(j){
+        var d = (j && j.data) ? j.data : j;
+        var contract = d && (d.contract_address || d.contractAddress);
+        var data = d && (d.data || d.calldata);
+        if (!contract || !data){
+          depStatus("The deposit details came back incomplete. Try again.");
+          return null;
+        }
+        depStatus("Confirm the deposit in your wallet. Keep the page open until it confirms.");
+        var valueHex = "0x0";
+        try {
+          var nf = BigInt(String(q.native_fee || "0"));
+          valueHex = "0x" + nf.toString(16);
+        } catch (e) { valueHex = "0x0"; }
+        return window.ethereum.request({
+          method: "eth_sendTransaction",
+          params: [{from: S.wallet, to: contract, data: data, value: valueHex}]
+        });
+      }).then(function(txHash){
+        if (!txHash) return;
+        depStatus("Deposit sent. Transaction " + txHash + ". Wait for it to confirm, then your balance updates.");
+        toast("<b>Deposit sent.</b> Wait for confirmation, then your balance updates.");
+        setTimeout(function(){ loadBalance(); }, 15000);
+      }).catch(function(err){
+        if (err && err.action) depStatusAction((err && err.message) ? err.message : "The deposit could not be sent.", err.action);
+        else depStatus((err && err.message) ? err.message : "The deposit could not be sent.");
+      }).then(function(){
+        if (sb) { sb.disabled = false; sb.textContent = "Send the deposit"; }
       });
     }
 
@@ -1073,6 +1612,14 @@
     }
     var ASSET_SLUGS = {bitcoin:"BTC", btc:"BTC", ethereum:"ETH", eth:"ETH", ether:"ETH", xrp:"XRP", ripple:"XRP", solana:"SOL", sol:"SOL", dogecoin:"DOGE", doge:"DOGE", bnb:"BNB", binance:"BNB", hyperliquid:"HYPE", hype:"HYPE", zcash:"ZEC", zec:"ZEC"};
     var ASSET_LABELS = {BTC:"Bitcoin", ETH:"Ethereum", XRP:"XRP", SOL:"Solana", DOGE:"Dogecoin", BNB:"BNB", HYPE:"Hyperliquid", ZEC:"ZCash"};
+    /* v1.1.4: official asset logos, bundled in asset-icons/ (no hotlinks). */
+    var ASSET_ICONS = {BTC:"asset-icons/btc.png", ETH:"asset-icons/eth.png", XRP:"asset-icons/xrp.png", SOL:"asset-icons/sol.png", DOGE:"asset-icons/doge.png", BNB:"asset-icons/bnb.png", HYPE:"asset-icons/hype.png", ZEC:"asset-icons/zec.png"};
+    function assetIcon(code){ return (code && ASSET_ICONS[code]) || null; }
+    function assetLogoHTML(code, cls){
+      var src = assetIcon(code);
+      if (!src) return "";
+      return '<img class="asset-logo ' + cls + '" src="' + src + '" alt="' + esc((ASSET_LABELS[code] || code) + " logo") + '" loading="lazy" />';
+    }
     /* muted accent per asset: sector tab dot and card dot. */
     var SECTOR_COLORS = {BTC:"#B08A00", ETH:"#5E548E", XRP:"#2F6690", SOL:"#3D7A5E", DOGE:"#A9713F", BNB:"#7A7D2B", HYPE:"#9C5B7A", ZEC:"#5F7A8A"};
     function sectorColor(key){ return SECTOR_COLORS[key] || "#6E6A61"; }
@@ -1208,6 +1755,131 @@
       var q = 1 / (1 + Math.exp(-x));
       return Math.min(0.99, Math.max(0.01, q));
     }
+    /* forecast */
+    /* The forecast is a short analyst note, not a pick. It reads the live
+       price move, the headlines, the mood, the order book and the time
+       left, and says what the market looks like and what comes next. It
+       never says which side to pick. A liquidity wall is only named when
+       it is big enough to matter (at least $1,000 at one price level);
+       a thin book is skipped, never dressed up as a wall. The probability
+       p is still recorded for scoring; only the words changed. */
+    var WALL_MIN_USD = 1000;
+    var WALL_NEAR = 0.05;
+    function assetLabel(code){
+      var labels = {BTC: "Bitcoin", ETH: "Ethereum", XRP: "XRP", SOL: "Solana", DOGE: "Dogecoin", BNB: "BNB", HYPE: "Hyperliquid", ZEC: "ZCash"};
+      return labels[code] || code;
+    }
+    function fmtWallUsd(v){
+      if (v >= 10000) return "$" + Math.round(v / 1000) + "k";
+      return "$" + Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+    function fmtMovePct(v){
+      return (Math.abs(v) * 100).toFixed(1).replace(/\.0$/, "") + "%";
+    }
+    /* topic of one headline, from its title. Only clear keywords count;
+       anything else returns null so the forecast never invents a story. */
+    function newsTopic(title){
+      if (!title) return null;
+      var t = title.toLowerCase();
+      if (t.indexOf("hack") !== -1) return "a hack";
+      if (t.indexOf("outflow") !== -1) return t.indexOf("record") !== -1 ? "record outflows" : "outflows";
+      if (t.indexOf("loses") !== -1 && t.indexOf("record") !== -1 && (t.indexOf("etf") !== -1 || t.indexOf("ibit") !== -1 || t.indexOf("fund") !== -1)) return "record outflows";
+      if (t.indexOf("etf") !== -1) return "ETF flows";
+      if (t.indexOf("sec") !== -1 || t.indexOf("fraud") !== -1 || t.indexOf("charges") !== -1) return "regulatory action";
+      if (t.indexOf("ipo") !== -1) return "a big listing";
+      if (t.indexOf("death cross") !== -1 || t.indexOf("retest") !== -1 || t.indexOf("chart pattern") !== -1) return "chart watchers flagging a pattern";
+      if (t.indexOf("rally") !== -1 || t.indexOf("surge") !== -1 || t.indexOf("soars") !== -1) return "a sharp rally";
+      if (t.indexOf("crash") !== -1 || t.indexOf("plunge") !== -1 || t.indexOf("tumble") !== -1) return "a sharp drop";
+      if (t.indexOf("halving") !== -1) return "the halving";
+      if (t.indexOf("upgrade") !== -1) return "an upgrade";
+      if (t.indexOf("fork") !== -1) return "a fork";
+      return null;
+    }
+    /* latest news topics for one asset, at most two, no repeats. A headline
+       counts when it is tagged with the asset, or when its title names the
+       asset (the feed tags by keyword, so a story about a Bitcoin fund
+       that only says IBIT still counts for Bitcoin). */
+    var ASSET_TITLE_WORDS = {
+      BTC: ["bitcoin", "btc", "ibit"],
+      ETH: ["ethereum", "ether", "eth"],
+      XRP: ["xrp", "ripple"],
+      SOL: ["solana", "sol"],
+      DOGE: ["dogecoin", "doge"],
+      BNB: ["bnb", "binance"],
+      HYPE: ["hyperliquid"],
+      ZEC: ["zcash", "zec"]
+    };
+    function headlineForAsset(it, asset){
+      var tags = it.tags || [];
+      for (var j = 0; j < tags.length; j++){ if (tags[j] === asset) return true; }
+      var words = ASSET_TITLE_WORDS[asset];
+      if (!words || !it.title) return false;
+      var t = it.title;
+      for (var k = 0; k < words.length; k++){
+        if (new RegExp("\\b" + words[k] + "\\b", "i").test(t)) return true;
+      }
+      return false;
+    }
+    function newsTopicsFor(asset){
+      if (!asset || !S.news || !S.news.items) return [];
+      var out = [];
+      for (var i = 0; i < S.news.items.length && out.length < 2; i++){
+        var it = S.news.items[i];
+        if (!headlineForAsset(it, asset)) continue;
+        var topic = newsTopic(it.title);
+        if (topic && out.indexOf(topic) === -1) out.push(topic);
+      }
+      return out;
+    }
+    /* mood from the news payload: heavy when more stories read negative
+       than positive, upbeat when the reverse. Null when unknown. */
+    function newsMood(){
+      if (!S.news || !S.news.mood) return null;
+      var pos = S.news.mood.positive, neg = S.news.mood.negative;
+      if (pos === null || pos === undefined || neg === null || neg === undefined) return null;
+      if (neg > pos) return "heavy";
+      if (pos > neg) return "upbeat";
+      return null;
+    }
+    /* 24h move for one asset from the ticker, as a fraction. Null when
+       the ticker has not loaded or does not carry the asset. */
+    function chg24For(asset){
+      if (!asset || !S.ticker) return null;
+      for (var i = 0; i < S.ticker.length; i++){
+        if (S.ticker[i].asset === asset){
+          var c = num(S.ticker[i].chg24);
+          return (c === null || c === undefined) ? null : c;
+        }
+      }
+      return null;
+    }
+    /* price move over the chart window, as a fraction. Detail view only;
+       used only when the ticker has no 24h move for the asset. */
+    function chartMoveFor(m){
+      var c = S.chart;
+      if (!c || !c.available || c.market_id !== m.id || !c.points || c.points.length < 2) return null;
+      var first = c.points[0][1], last = c.points[c.points.length - 1][1];
+      if (!first || first <= 0) return null;
+      return (last - first) / first;
+    }
+    /* largest near-price level on each side of one token book, in dollars.
+       Near-price means within 0.05 of the market mid price. Far-out levels
+       (0.01, 0.99) are not walls, they are just quotes sitting far away. */
+    function bookWalls(book, p){
+      if (!book || p === null || p === undefined) return null;
+      function best(list){
+        var b = 0, bp = null;
+        (list || []).forEach(function(e){
+          var pr = num(e.price), sz = num(e.size);
+          if (pr === null || sz === null) return;
+          if (Math.abs(pr - p) > WALL_NEAR) return;
+          var v = pr * sz;
+          if (v > b){ b = v; bp = pr; }
+        });
+        return {value: b, price: bp};
+      }
+      return {bid: best(book.bids), ask: best(book.asks)};
+    }
     function forecastFor(m){
       var p = m.p0;
       if (p === null || p === undefined) return null;
@@ -1215,36 +1887,92 @@
       var minsLeft = m.end ? Math.max(0, Math.round((m.end - now) / 60)) : null;
       var spread = (m.bid !== null && m.ask !== null) ? m.ask - m.bid : null;
       var vol24 = num(m.vol24);
-      var l0 = m.outcomes[0].label, l1 = m.outcomes[1].label;
       var adj = calibratedP(m);
       var fp = adj !== null ? adj : p;
-      var verdict, lean = null;
-      if (fp >= 0.60){ verdict = "Leaning " + l0; lean = l0; }
-      else if (fp <= 0.40){ verdict = "Leaning " + l1; lean = l1; }
-      else verdict = "About even";
-      var bits = [];
-      if (adj !== null) bits.push("the market prices " + l0 + " at " + fmtPct(p) + ", but past results point to " + fmtPct(fp));
-      else if (fp >= 0.48 && fp <= 0.52) bits.push("the price sits near 50%, so the market has not picked a side yet");
-      else bits.push("the price sits at " + fmtPct(fp) + " for " + l0);
-      if (minsLeft !== null){
-        if (minsLeft <= 0) bits.push("time is up, the market has closed");
-        else if (minsLeft < 5) bits.push("with under 5 minutes left, one trade can decide it");
-        else if (minsLeft < 60) bits.push("with about " + minsLeft + " minutes left");
-        else {
-          var hrs = Math.round(minsLeft / 60);
-          bits.push("with about " + hrs + (hrs === 1 ? " hour" : " hours") + " left");
+      var asset = assetOf(m);
+      var chg = chg24For(asset);
+      var chartMove = (chg === null) ? chartMoveFor(m) : null;
+      var movePct = chg !== null ? chg : chartMove;
+      var moveSpan = chg !== null ? "on the day" : "over the last hour";
+      var mood = newsMood();
+      var topics = newsTopicsFor(asset);
+      var wall = null;
+      var b0 = m.outcomes[0] && m.outcomes[0].tokenId ? S.books[m.outcomes[0].tokenId] : null;
+      var w = bookWalls(b0, p);
+      if (w){
+        var bidOk = w.bid.value >= WALL_MIN_USD, askOk = w.ask.value >= WALL_MIN_USD;
+        if (bidOk || askOk) wall = {bid: bidOk ? w.bid : null, ask: askOk ? w.ask : null};
+      }
+      var oneSided = false;
+      if (wall){
+        if (wall.bid && (!wall.ask || wall.bid.value >= 2 * wall.ask.value)) oneSided = true;
+        if (wall.ask && (!wall.bid || wall.ask.value >= 2 * wall.bid.value)) oneSided = true;
+      }
+      /* verdict: a label for the market, never a side. */
+      var verdict;
+      if (minsLeft !== null && minsLeft <= 0) verdict = "Closed";
+      else if (movePct !== null && Math.abs(movePct) >= 0.03) verdict = "Moving";
+      else if (oneSided) verdict = "One-sided";
+      else if (vol24 !== null && vol24 >= 10000) verdict = "Crowded";
+      else if (p >= 0.45 && p <= 0.55 && ((movePct !== null && movePct <= -0.01) || mood === "heavy")) verdict = "Tense";
+      else verdict = "Quiet";
+      var assetName = asset ? assetLabel(asset) : null;
+      var sentences = [];
+      if (assetName && movePct !== null){
+        if (movePct <= -0.01) sentences.push(assetName + " is under pressure.");
+        else if (movePct >= 0.01) sentences.push(assetName + " is climbing.");
+        else sentences.push(assetName + " is holding steady.");
+      }
+      var parts = [];
+      if (movePct !== null){
+        if (movePct <= -0.01) parts.push("it has been sliding, down about " + fmtMovePct(movePct) + " " + moveSpan);
+        else if (movePct >= 0.01) parts.push("it has been climbing, up about " + fmtMovePct(movePct) + " " + moveSpan);
+        else parts.push("it has barely moved " + moveSpan);
+      }
+      if (mood === "heavy") parts.push("the mood in the headlines is heavy");
+      else if (mood === "upbeat") parts.push("the mood in the headlines is upbeat");
+      if (parts.length){
+        var s2 = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+        for (var i = 1; i < parts.length; i++) s2 += ", and " + parts[i];
+        if (topics.length) s2 += ", with " + topics.join(" and ") + " in the news today";
+        s2 += ".";
+        sentences.push(s2);
+      } else if (topics.length){
+        sentences.push("The headlines are talking about " + topics.join(" and ") + " today.");
+      }
+      if (wall){
+        var wbits = [];
+        if (wall.bid) wbits.push("the buy side is sitting at " + fmtWallUsd(wall.bid.value) + " in liquidity walls at " + wall.bid.price.toFixed(2));
+        if (wall.ask) wbits.push("the sell side is sitting at " + fmtWallUsd(wall.ask.value) + " in liquidity walls at " + wall.ask.price.toFixed(2));
+        if (wbits.length){
+          var ws = wbits[0].charAt(0).toUpperCase() + wbits[0].slice(1);
+          if (wbits.length > 1) ws += " and " + wbits[1];
+          sentences.push(ws + ".");
         }
       }
-      if (spread !== null && spread >= 0.06) bits.push("the gap between the best bid and ask is wide, so the price can move fast");
-      else if (spread !== null && spread <= 0.03) bits.push("the book is tight, so the price is firm");
-      if (vol24 === null || vol24 === 0) bits.push("no trades in the last day, so the price is quotes only");
-      else bits.push(fmtVol(vol24) + " traded in the last day");
-      var reason = bits.join(", ");
-      reason = reason.charAt(0).toUpperCase() + reason.slice(1) + ".";
+      if (minsLeft !== null && minsLeft <= 0){
+        sentences = ["Time is up, the market has closed."];
+      } else {
+        var timePart = null;
+        if (minsLeft !== null){
+          if (minsLeft < 5) timePart = "under five minutes left";
+          else if (minsLeft < 60) timePart = "about " + minsLeft + " minutes left";
+          else if (minsLeft < 1440){ var hrs = Math.round(minsLeft / 60); timePart = "about " + hrs + (hrs === 1 ? " hour" : " hours") + " left"; }
+          else { var dys = Math.round(minsLeft / 1440); timePart = "about " + dys + (dys === 1 ? " day" : " days") + " left"; }
+        }
+        var subj = assetName ? " for " + assetName : "";
+        var nextPart;
+        if (movePct !== null && movePct <= -0.01) nextPart = "what comes next" + subj + " is a test of whether buyers step in at these levels or the slide carries on";
+        else if (movePct !== null && movePct >= 0.01) nextPart = "what comes next" + subj + " is a test of whether the climb holds or the price gives back its gains";
+        else nextPart = "what comes next" + subj + " is a test of which way the market breaks from here";
+        if (timePart) sentences.push("With " + timePart + ", " + nextPart + ".");
+        else sentences.push(nextPart.charAt(0).toUpperCase() + nextPart.slice(1) + ".");
+      }
+      var reason = sentences.join(" ");
       var basis = "Price " + fmtPrice(p) + " · spread " + (spread === null ? "-" : spread.toFixed(2)) + " · " +
         (minsLeft === null ? "time left -" : (minsLeft > 0 ? timeLeft(m.end - now) + " left" : "closed")) +
         " · volume in the last day " + fmtVol(vol24);
-      return {verdict: verdict, reason: reason, basis: basis, p: fp, pRaw: p, learned: adj !== null, lean: lean};
+      return {verdict: verdict, reason: reason, basis: basis, p: fp, pRaw: p, learned: adj !== null};
     }
 
     /* load */
@@ -1349,6 +2077,7 @@
         return r.json();
       }).then(function(j){
         if (!j || j.error || !j.items) throw new Error((j && j.error) || "Bad response");
+        S.news = j;
         renderNews(j);
       }).catch(function(){
         $("newsBox").innerHTML = '<div class="quiet">Market news is unavailable right now. The news feeds could not be reached.</div>';
@@ -1605,27 +2334,6 @@
       kv.style.display = "";
     }
     /* trend over the window and distance from the win line, real data only. */
-    function chartForecastBits(m){
-      var c = S.chart;
-      if (!c || !c.available || c.market_id !== m.id || !c.points || !c.points.length) return null;
-      var first = c.points[0][1], last = c.points[c.points.length - 1][1];
-      var chg = first > 0 ? (last - first) / first * 100 : 0;
-      var trend = Math.abs(chg) < 0.05 ? "barely moved" : (chg > 0 ? "risen" : "fallen");
-      var l0 = m.outcomes[0].label;
-      if (!c.started){
-        return "The window has not started yet. Over the last hour the price has " + trend + ".";
-      }
-      var line = (c.line !== null && c.line !== undefined) ? c.line : null;
-      if (line === null || line <= 0) return "Over the window so far the price has " + trend + ".";
-      var ahead = c.average >= line ? l0 : m.outcomes[1].label;
-      if (c.ended){
-        var dp = (c.average - line) / line * 100;
-        return "Over the window the price " + trend + ", and the average ended " + Math.abs(dp).toFixed(1) + "% " + (dp >= 0 ? "above" : "below") + " the line " + l0 + " needs to win.";
-      }
-      var d = (c.current - line) / line * 100;
-      return "Over the window so far the price has " + trend + ", and it sits " + Math.abs(d).toFixed(1) + "% " + (d >= 0 ? "above" : "below") + " the line " + l0 + " needs to win. On the average so far, " + ahead + " is ahead right now.";
-    }
-
     /* same drawing, smaller, no axis labels. only shows when the feed answers. */
     function loadFeatChart(id){
       S.featChartFor = id;
@@ -1677,6 +2385,7 @@
         return r.json();
       }).then(function(j){
         if (!j || j.error || !j.assets || !j.assets.length) throw new Error("Bad response");
+        S.ticker = j.assets;
         renderTicker(j.assets);
         S.tickerLoaded = true;
       }).catch(function(){
@@ -1686,7 +2395,7 @@
     function tickerItemHTML(a){
       var chg = (a.chg24 === null || a.chg24 === undefined) ? "" :
         '<span class="' + (a.chg24 >= 0 ? "chg-up" : "chg-down") + '">' + (a.chg24 >= 0 ? "+" : "") + (a.chg24 * 100).toFixed(1) + "%</span>";
-      return '<span class="sym">' + esc(a.asset) + '</span><span class="pr">' + fmtTickerPrice(a.price) + '</span>' + chg;
+      return assetLogoHTML(a.asset, "asset-logo--ticker") + '<span class="sym">' + esc(a.asset) + '</span><span class="pr">' + fmtTickerPrice(a.price) + '</span>' + chg;
     }
     /* only moves when the doubled track is wider than the strip. */
     function fitTicker(){
@@ -1774,7 +2483,7 @@
     }
 
     /* watchlist */
-    var WATCH_KEY = "prognosis-watchlist-v1";
+    var WATCH_KEY = "prognos-labs-watchlist-v1";
     function loadWatch(){
       try {
         var raw = localStorage.getItem(WATCH_KEY);
@@ -1855,7 +2564,8 @@
         alerts.forEach(function(a){ allAlerts.push({q: m.question, a: a}); });
         var now = Math.floor(Date.now() / 1000);
         var left = m.end ? (m.end - now > 0 ? timeLeft(m.end - now) : "closed") : "-";
-        html += '<div class="watch-item"><p class="wq"><button type="button" data-open="' + esc(m.id) + '">' + esc(m.question) + '</button></p>' +
+        var wa = assetOf(m);
+        html += '<div class="watch-item"><p class="wq">' + assetLogoHTML(wa, "asset-logo--card") + '<button type="button" data-open="' + esc(m.id) + '">' + esc(m.question) + '</button></p>' +
           (fc ? '<p class="fc" style="padding-top:0"><b>' + esc(fc.verdict) + '.</b> ' + esc(fc.reason) + '</p>' : '') +
           '<div class="watch-kv"><span>PRICE <b>' + fmtPct(m.p0) + '</b></span><span>TIME LEFT <b>' + esc(left) + '</b></span><span>VOLUME <b>' + fmtVol(m.volume) + '</b></span></div>' +
           (alerts.length ? '<p class="watch-alert"><b>Alert:</b> ' + esc(alerts.join("; ")) + '.</p>' : '') +
@@ -1906,7 +2616,8 @@
         var col = sectorColor(c.key);
         var on = S.sector === c.key;
         var style = on ? ' style="background:' + col + '26;border-color:' + col + ';color:#111111"' : '';
-        html += '<button type="button" role="tab" class="sector-tab' + (on ? " on" : "") + '"' + style + ' data-sector="' + esc(c.key) + '"><span class="sector-dot" style="background:' + col + '"></span>' + esc(c.label) + ' <span class="n">(' + c.n + ')</span></button>';
+        var logo = assetLogoHTML(c.key, "asset-logo--tab");
+        html += '<button type="button" role="tab" class="sector-tab' + (on ? " on" : "") + '"' + style + ' data-sector="' + esc(c.key) + '">' + (logo || '<span class="sector-dot" style="background:' + col + '"></span>') + esc(c.label) + ' <span class="n">(' + c.n + ')</span></button>';
       });
       tabs.innerHTML = html;
       tabs.querySelectorAll("[data-sector]").forEach(function(b){
@@ -1936,6 +2647,11 @@
       S.featId = m ? m.id : null;
       if (m){
         var st = statusOf(m);
+        /* v1.1.4: featured market shows the real asset logo. */
+        var featAsset = assetOf(m);
+        var featLogo = $("featLogo");
+        if (featAsset && featLogo){ featLogo.src = assetIcon(featAsset); featLogo.alt = (ASSET_LABELS[featAsset] || featAsset) + " logo"; featLogo.style.display = ""; }
+        else if (featLogo){ featLogo.style.display = "none"; }
         $("featQ").textContent = m.question;
         var pill = $("featStatus");
         pill.textContent = st.label;
@@ -1965,7 +2681,7 @@
         var ffc = forecastFor(m);
         var fcCard = $("featFc");
         if (ffc){
-          $("featFcVerdict").textContent = ffc.lean ? ffc.lean + ", " + fmtPct(ffc.p) : "About even";
+          $("featFcVerdict").textContent = ffc.verdict;
           $("featFcReason").textContent = ffc.reason;
           fcCard.style.display = "";
         } else {
@@ -2016,10 +2732,13 @@
       var fl = S.flags && S.flags[mk.id];
       var flagLab = fl ? (fl.kind === "move" ? "PRICE MOVED" : fl.kind === "spread" ? "SPREAD WIDENED" : "NO QUOTE") : "";
       var prev = S.prevPrices ? S.prevPrices[mk.id] : null;
+      /* v1.1.4: real asset logo in place of the coloured dot. */
+      var mkAsset = assetOf(mk);
+      var markHTML = mkAsset ? assetLogoHTML(mkAsset, "asset-logo--card") : '<span class="sector-dot" style="background:' + sectorColor(sectorOf(mk).key) + '"></span>';
       var card = document.createElement("button");
       card.type = "button"; card.className = "card";
       card.innerHTML =
-        '<span class="card-top"><span style="display:inline-flex;align-items:center;gap:10px"><span class="sector-dot" style="background:' + sectorColor(sectorOf(mk).key) + '"></span><span class="sec-note">' + esc(groupOf(mk).toUpperCase()) + '</span></span><span style="display:flex;align-items:center;gap:4px"><span class="pill pill--sm">' + esc(stk.label) + '</span>' + (fl ? '<span class="flag-chip">! ' + esc(flagLab) + '</span>' : '') + '<span class="star' + (isWatched(mk.id) ? " on" : "") + '" role="button" tabindex="0" aria-label="Keep this market on your watchlist" data-star="' + esc(mk.id) + '">' + (isWatched(mk.id) ? "★" : "☆") + '</span></span></span>' +
+        '<span class="card-top"><span style="display:inline-flex;align-items:center;gap:10px">' + markHTML + '<span class="sec-note">' + esc(groupOf(mk).toUpperCase()) + '</span></span><span style="display:flex;align-items:center;gap:4px"><span class="pill pill--sm">' + esc(stk.label) + '</span>' + (fl ? '<span class="flag-chip">! ' + esc(flagLab) + '</span>' : '') + '<span class="star' + (isWatched(mk.id) ? " on" : "") + '" role="button" tabindex="0" aria-label="Keep this market on your watchlist" data-star="' + esc(mk.id) + '">' + (isWatched(mk.id) ? "★" : "☆") + '</span></span></span>' +
         '<span class="card-q">' + esc(mk.question) + '</span>' +
         splitHTML() +
         '<span class="card-outcomes"><span class="oc first"><span class="s">' + esc(mk.outcomes[0].label) + '</span><span class="p' + flashClass(prev ? prev.p0 : null, mk.p0, mk.id + ":0") + '">' + fmtPct(mk.p0) + '</span></span>' +
@@ -2111,6 +2830,15 @@
     function renderMarket(){
       var m = cur(); if (!m) return;
       var st = statusOf(m);
+      /* v1.1.4: market page shows the real asset logo next to the asset name. */
+      var mAsset = assetOf(m);
+      var mRow = $("mAssetRow");
+      if (mAsset && mRow){
+        $("mLogo").src = assetIcon(mAsset);
+        $("mLogo").alt = (ASSET_LABELS[mAsset] || mAsset) + " logo";
+        $("mAssetName").textContent = (ASSET_LABELS[mAsset] || mAsset) + " · " + mAsset;
+        mRow.style.display = "flex";
+      } else if (mRow){ mRow.style.display = "none"; }
       $("mQ").textContent = m.question;
       var pill = $("mStatus");
       pill.textContent = st.label;
@@ -2135,10 +2863,9 @@
       $("tradeL1").textContent = m.outcomes[1].label.toUpperCase();
       $("tradeP0").textContent = fmtPrice(m.ask);
       $("tradeP1").textContent = fmtPrice(m.bid === null ? null : 1 - m.bid);
+      setTradeSide(S.tradeSide);
       var dfc = forecastFor(m);
       var ftext = dfc ? dfc.verdict + ". " + dfc.reason : "No forecast for this market yet. There is no live price to work from.";
-      var cb = chartForecastBits(m);
-      if (dfc && cb) ftext += " " + cb;
       $("mForecastText").textContent = ftext;
       $("mForecastBasis").textContent = dfc ? dfc.basis : "-";
       var lineRow = $("mForecastLineRow");
@@ -2174,7 +2901,7 @@
       document.querySelectorAll("[data-nav]").forEach(function(b){
         b.classList.toggle("on", b.getAttribute("data-nav") === name);
       });
-      if (name === "watchlist") renderWatchlist();
+      if (name === "watchlist") { renderWatchlist(); renderPositions(); if (S.wallet){ loadBalance(); loadPositions(); } }
     }
     document.querySelectorAll("[data-nav]").forEach(function(b){
       b.addEventListener("click", function(e){
@@ -2191,11 +2918,14 @@
       loadMarkets().then(function(){ if (S.markets.length) toast("<b>Prices refreshed.</b>"); });
     });
     $("retryBtn").addEventListener("click", function(){ loadMarkets(); });
-    /* nav: bell, menu, and accounts (accounts open with trading). */
-    function authSoon(){ toast("Accounts open when trading opens. Watching and forecasts are live now."); }
+    /* nav: bell, menu, and wallet. */
     ["signInBtn", "createBtn", "mSignInBtn", "mCreateBtn"].forEach(function(id){
-      var b = $(id); if (b) b.addEventListener("click", function(){ var mm = $("mobileMenu"); if (mm) mm.classList.remove("open"); authSoon(); });
+      var b = $(id); if (b) b.addEventListener("click", function(){ var mm = $("mobileMenu"); if (mm) mm.classList.remove("open"); connectWallet(); });
     });
+    var lkBtn = $("linkBtn");
+    if (lkBtn) lkBtn.addEventListener("click", function(){ linkWallet(); });
+    var depBtn = $("depositBtn");
+    if (depBtn) depBtn.addEventListener("click", function(){ openDeposit(); });
     $("menuBtn").addEventListener("click", function(){ $("mobileMenu").classList.toggle("open"); });
     document.querySelectorAll("#mobileMenu [data-nav]").forEach(function(b){ b.addEventListener("click", function(){ $("mobileMenu").classList.remove("open"); }); });
     $("bellBtn").addEventListener("click", function(){
@@ -2233,6 +2963,39 @@
       var m = featuredMarket();
       if (m) openMarket(m.id);
     });
+    /* featured Buy buttons: open the market with that side chosen. */
+    var fb0 = $("featBuyUpBtn"), fb1 = $("featBuyDownBtn");
+    if (fb0) fb0.addEventListener("click", function(e){
+      e.stopPropagation();
+      var m = featuredMarket();
+      if (!m) return;
+      S.tradeSide = 0;
+      openMarket(m.id);
+      setTradeSide(0);
+    });
+    if (fb1) fb1.addEventListener("click", function(e){
+      e.stopPropagation();
+      var m = featuredMarket();
+      if (!m) return;
+      S.tradeSide = 1;
+      openMarket(m.id);
+      setTradeSide(1);
+    });
+    /* trade panel */
+    var ts0 = $("tradeSide0"), ts1 = $("tradeSide1");
+    if (ts0) ts0.addEventListener("click", function(){ setTradeSide(0); });
+    if (ts1) ts1.addEventListener("click", function(){ setTradeSide(1); });
+    var tb = $("tradeBuyBtn");
+    if (tb) tb.addEventListener("click", function(){ placeTrade(); });
+    /* deposit modal */
+    var dq = $("depQuoteBtn");
+    if (dq) dq.addEventListener("click", function(){ depositQuote(); });
+    var ds = $("depSendBtn");
+    if (ds) ds.addEventListener("click", function(){ depositSend(); });
+    var dc = $("depositClose");
+    if (dc) dc.addEventListener("click", function(){ closeDeposit(); });
+    var dm = $("depositModal");
+    if (dm) dm.addEventListener("click", function(e){ if (e.target === dm) closeDeposit(); });
 
     /* countdowns tick every second off the end time, between 30s fetches. */
     setInterval(function(){
@@ -2276,6 +3039,42 @@
     loadTicker();
     loadLearning();
     renderLearnScore();
+    /* restore a connected wallet from this device, then refresh its balance and positions. */
+    try {
+      var savedW = localStorage.getItem("prognos-wallet-v1");
+      if (savedW && isEvmAddr(savedW)){
+        S.wallet = savedW;
+        S.walletLinked = false;
+        /* restore the trading session for this wallet, if it is still valid (24h). */
+        try {
+          var savedS = JSON.parse(localStorage.getItem("prognos-session-v1") || "null");
+          if (savedS && savedS.address && savedS.address.toLowerCase() === savedW.toLowerCase() && savedS.session) {
+            S.session = savedS.session;
+          }
+        } catch (e) {}
+        setWalletUI();
+        checkLinkStatus();
+        loadBalance();
+        loadPositions();
+      }
+    } catch (e) {}
+    if (window.ethereum && window.ethereum.on){
+      window.ethereum.on("accountsChanged", function(accs){
+        if (accs && accs.length && isEvmAddr(accs[0])){
+          S.wallet = accs[0];
+          S.walletLinked = false;
+          S.session = null;
+          try { localStorage.setItem("prognos-wallet-v1", S.wallet); } catch (e) {}
+          try { localStorage.removeItem("prognos-session-v1"); } catch (e) {}
+          setWalletUI(); checkLinkStatus(); loadBalance(); loadPositions();
+        } else {
+          S.wallet = null; S.walletBal = null; S.walletPos = null; S.walletLinked = false; S.session = null;
+          try { localStorage.removeItem("prognos-wallet-v1"); } catch (e) {}
+          try { localStorage.removeItem("prognos-session-v1"); } catch (e) {}
+          setWalletUI(); renderPositions();
+        }
+      });
+    }
     setInterval(function(){ if (!document.hidden) loadMarkets(); }, 30000);
     setInterval(function(){ if (!document.hidden) loadNews(); }, 300000);
     setInterval(function(){ if (!document.hidden) loadLearning(); }, 300000);

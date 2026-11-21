@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- IBM Plex Mono, bundled in the APK so prices, labels and countdowns
+     never inherit the phone's system font either. OFL licensed, from
+     Google Fonts (github.com/google/fonts). Static per weight, subset to
+     Latin + punctuation. Mono digits are equal width, so changing prices
+     never shift the layout. -->
+<font-family xmlns:android="http://schemas.android.com/apk/res/android">
+    <font
+        android:fontStyle="normal"
+        android:fontWeight="400"
+        android:font="@font/plexmono_regular" />
+    <font
+        android:fontStyle="normal"
+        android:fontWeight="500"
+        android:font="@font/plexmono_medium" />
+    <font
+        android:fontStyle="normal"
+        android:fontWeight="600"
+        android:font="@font/plexmono_semibold" />
+    <font
+        android:fontStyle="normal"
+        android:fontWeight="700"
+        android:font="@font/plexmono_bold" />
+</font-family>
