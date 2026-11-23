@@ -229,8 +229,31 @@ private fun bookWalls(book: BookResponse?, p: Double): Pair<WallLevel?, WallLeve
     return best(book.bids) to best(book.asks)
 }
 
+/**
+ * The price the forecast reads. The market's own outcome price when
+ * it has one; otherwise the latest price the market page already
+ * shows, so the forecast never claims there is no price while the
+ * price and the chart sit right above it. The chart's last point is
+ * the market's latest tick; failing that, the middle of the best
+ * bid and ask in the order book. All three are outcome prices
+ * between 0 and 1. A price outside that range is not a market
+ * price (the asset price is dollars, not a probability) and is
+ * ignored. Null only when nothing anywhere has a price.
+ */
+fun forecastPrice(m: Market, ctx: ForecastContext?): Double? {
+    m.p0?.let { if (it in 0.0..1.0) return it }
+    ctx?.chartPoints?.lastOrNull()?.getOrNull(1)
+        ?.takeIf { it in 0.0..1.0 }?.let { return it }
+    val bid = ctx?.bookUp?.bids?.firstOrNull()?.price?.let { parseNum(it) }
+    val ask = ctx?.bookDown?.asks?.firstOrNull()?.price?.let { parseNum(it) }
+    if (bid != null && ask != null && bid in 0.0..1.0 && ask in 0.0..1.0) {
+        return (bid + ask) / 2.0
+    }
+    return null
+}
+
 fun forecastFor(m: Market, nowSec: Long = System.currentTimeMillis() / 1000, ctx: ForecastContext? = null): Forecast? {
-    val p = m.p0 ?: return null
+    val p = forecastPrice(m, ctx) ?: return null
     val minsLeft: Long? = if (m.end > 0) maxOf(0L, ((m.end - nowSec) / 60)) else null
     val spread: Double? = if (m.bid != null && m.ask != null) m.ask - m.bid else null
     val vol24 = parseNum(m.vol24)

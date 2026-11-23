@@ -74,6 +74,18 @@ fun topMovers(ticker: List<TickerAsset>, count: Int = 4): List<TickerAsset> {
         .take(count)
 }
 
+/**
+ * v1.1.14: whether the dashboard shows the full-screen spinner.
+ * The ticker lands first (~1.5s) while the markets list can take
+ * ~7s server-side, and the top movers come from the ticker. When
+ * the ticker is already in, the dashboard shows it at once and the
+ * markets load underneath; only a screen with no data at all waits
+ * on the network. The cached ticker counts: a cold start with last
+ * session's data shows the movers instantly.
+ */
+fun dashboardShowsSpinner(loading: Boolean, marketsEmpty: Boolean, tickerEmpty: Boolean): Boolean =
+    loading && marketsEmpty && tickerEmpty
+
 fun greetingForHour(hour: Int): String {
     return when (hour) {
         in 5..11 -> "Good morning"

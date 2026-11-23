@@ -101,13 +101,6 @@ fun btcEquivalentText(balanceUsd: Double?, btcPriceUsd: Double?): String? {
     return "\u2248 " + String.format(Locale.US, "%.4f", btc) + " BTC"
 }
 
-/**
- * VIP tier. Prognos Labs has no VIP programme and no tier field anywhere
- * in the product, so every signed-in user is Standard. This is the real
- * state, not a placeholder: do not invent tiers, benefits or perks.
- */
-fun vipTierLabel(): String = "Standard"
-
 /** How long the "Send a new code" link stays disabled after a code is sent. */
 const val RESEND_COOLDOWN_SECONDS = 60L
 

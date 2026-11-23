@@ -13,3 +13,6 @@ app/build/
 local.properties
 *.apk
 captures/
+
+# Firebase client config (contains an API key; keep out of the public repo)
+google-services.json

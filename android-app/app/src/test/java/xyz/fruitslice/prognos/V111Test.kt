@@ -19,7 +19,6 @@ import xyz.fruitslice.prognos.data.orderAmountError
 import xyz.fruitslice.prognos.data.parseAuthResponse
 import xyz.fruitslice.prognos.data.parseFxRates
 import xyz.fruitslice.prognos.data.resendSecondsLeft
-import xyz.fruitslice.prognos.data.vipTierLabel
 
 /**
  * v1.1.1: forgot password from login, OTP-loop fix, 60s resend
@@ -111,9 +110,16 @@ class V111Test {
     fun signupVerifySetsARegistrationCompleteNotice() {
         val repo = readSource("java/xyz/fruitslice/prognos/data/Repository.kt")
         val verify = functionBody(repo, "suspend fun verifyOtp(")
+        // v1.1.6: the notice goes through registrationCompleteNotice,
+        // which says "log in to get your code" when the password is
+        // gone (the app restarted) instead of claiming a code was sent.
         assertTrue(
             "verifyOtp must set a Registration complete notice after signup verifies",
-            verify.contains("Registration complete")
+            verify.contains("registrationCompleteNotice(pending.email, passwordPresent = true)")
+        )
+        assertTrue(
+            "verifyOtp must use the no-password notice when the password is gone",
+            verify.contains("registrationCompleteNotice(pending.email, passwordPresent = false)")
         )
     }
 
@@ -233,13 +239,6 @@ class V111Test {
         assertNotNull(orderAmountError("10.1234567"))
     }
 
-    // ---- 7. VIP: the real state is Standard, no invented tiers ----
-
-    @Test
-    fun vipTierIsStandard() {
-        assertEquals("Standard", vipTierLabel())
-    }
-
     // ---- 8. Change wallet: the new wallet must be the pending one ----
 
     @Test
@@ -260,7 +259,7 @@ class V111Test {
     // ---- 9. Shipping shape: version bump + App Link autoVerify ----
 
     @Test
-    fun versionIs115() {
+    fun versionIs116() {
         val cwd = System.getProperty("user.dir") ?: "."
         val gradle = listOf(
             File("app/build.gradle.kts"),
@@ -270,8 +269,8 @@ class V111Test {
         ).firstOrNull { it.isFile }
             ?: throw AssertionError("Cannot find app/build.gradle.kts from $cwd")
         val text = gradle.readText()
-        assertTrue("versionCode must be 15", text.contains("versionCode = 15"))
-        assertTrue("versionName must be 1.1.5", text.contains("versionName = \"1.1.5\""))
+        assertTrue("versionCode must be 26", text.contains("versionCode = 26"))
+        assertTrue("versionName must be 1.1.16", text.contains("versionName = \"1.1.16\""))
     }
 
     @Test

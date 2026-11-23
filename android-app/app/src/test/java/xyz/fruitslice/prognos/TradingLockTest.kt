@@ -5,7 +5,7 @@ import org.junit.Test
 import xyz.fruitslice.prognos.data.TradingLock
 
 /**
- * The rule the whole app follows: trading, deposits and
+ * The gate is the rule the whole app follows: trading, deposits and
  * withdrawals are all closed until trading opens. Every money button
  * in the app reads these flags, so if one of them ever flips to true
  * by mistake, this test fails and the build cannot ship it.

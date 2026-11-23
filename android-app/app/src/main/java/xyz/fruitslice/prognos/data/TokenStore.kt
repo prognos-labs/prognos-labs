@@ -6,38 +6,55 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
 /**
+ * Creates the encrypted preferences store for a name, or null when
+ * the device Keystore cannot provide it (very old or broken
+ * Keystore). Null is the signal to keep the values in memory only:
+ * the callers never fall back to plain text on disk.
+ */
+fun createEncryptedPrefs(context: Context, name: String): SharedPreferences? {
+    return try {
+        val masterKey = MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+        EncryptedSharedPreferences.create(
+            context,
+            name,
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    } catch (e: Exception) {
+        null
+    }
+}
+
+/**
  * Where the auth token and the trading session live on the device.
  *
  * EncryptedSharedPreferences (AES256-GCM, key in the Android Keystore)
- * when it can be created; plain SharedPreferences only as a fallback
- * when the encrypted store fails on a device (very old or broken
- * Keystore). The fallback is reported through [encrypted] so the
- * build report can say which one shipped. The app never writes a
- * password or a private key anywhere: only the server-issued tokens,
- * the linked wallet address and the signed-in display name/email.
+ * when it can be created. When it cannot (a broken Keystore), the
+ * values are kept in memory only and never written to disk: a token
+ * in plain text on disk is worse than asking the user to sign in
+ * again after the app restarts. [encrypted] reports which one is in
+ * use, so the build report can say which shipped. The app never
+ * writes a password or a private key anywhere: only the server-issued
+ * tokens, the linked wallet address and the signed-in display
+ * name/email.
+ *
+ * `encryptedFactory` is injectable so tests can simulate a broken
+ * Keystore without one.
  */
-class TokenStore(context: Context) {
+class TokenStore(
+    context: Context,
+    encryptedFactory: (Context, String) -> SharedPreferences? = ::createEncryptedPrefs
+) {
     private val prefs: SharedPreferences
     val encrypted: Boolean
 
     init {
-        var enc: SharedPreferences? = null
-        try {
-            val masterKey = MasterKey.Builder(context)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-            enc = EncryptedSharedPreferences.create(
-                context,
-                "prognos_tokens",
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            )
-        } catch (e: Exception) {
-            enc = null
-        }
+        val enc = encryptedFactory(context, "prognos_tokens")
         encrypted = enc != null
-        prefs = enc ?: context.getSharedPreferences("prognos_tokens", Context.MODE_PRIVATE)
+        prefs = enc ?: MemorySharedPreferences()
     }
 
     var authToken: String?
@@ -119,7 +136,7 @@ class TokenStore(context: Context) {
      * Drops only the trading session, keeping the linked wallet. Used
      * when a wallet change is confirmed for a different address: the old
      * session belongs to the old wallet and must never be reused for the
-     * new one. Trading stays closed until the new link hands back its
+     * new one. Trading stays locked until the new link hands back its
      * own session.
      */
     fun clearTradingSession() {

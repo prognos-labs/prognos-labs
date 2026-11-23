@@ -9,12 +9,14 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import xyz.fruitslice.prognos.model.BookResponse
 import xyz.fruitslice.prognos.model.ChartResponse
 import xyz.fruitslice.prognos.model.Market
@@ -31,7 +33,8 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 class Repository(
     private val api: PrognosApi = createApi(),
     private val diskCache: MarketDiskCache? = null,
-    private val memory: MemoryMarketCache = MemoryMarketCache()
+    private val memory: MemoryMarketCache = MemoryMarketCache(),
+    private val detailCache: DetailCache = DetailCache()
 ) {
 
     /**
@@ -63,14 +66,21 @@ class Repository(
      * the last real data (memory, then disk) is returned instead of
      * throwing, so a slow or dead server never blanks the screen.
      * It throws only when no data exists anywhere.
+     *
+     * v1.1.8: the mapping and the disk save used to run on the
+     * caller's thread, which is the main thread on every screen;
+     * they now run on IO.
      */
     suspend fun loadMarkets(forceRefresh: Boolean = false): List<Market> {
         if (!forceRefresh) memory.freshMarkets()?.let { return it }
         return try {
             val items = api.markets(100).items ?: emptyList()
-            val markets = items.mapNotNull { it.toMarket() }
-            memory.putMarkets(markets)
-            diskCache?.saveMarkets(markets)
+            val markets = withContext(Dispatchers.IO) {
+                items.mapNotNull { it.toMarket() }.also { parsed ->
+                    memory.putMarkets(parsed)
+                    diskCache?.saveMarkets(parsed)
+                }
+            }
             markets
         } catch (e: Exception) {
             memory.staleMarkets() ?: cachedMarkets() ?: throw e
@@ -80,13 +90,17 @@ class Repository(
     /**
      * Ticker, fast. Same rule as [loadMarkets]: fresh memory first,
      * then the network, then the last real data on failure.
+     *
+     * v1.1.8: mapping and disk save on IO, as above.
      */
     suspend fun loadTicker(forceRefresh: Boolean = false): List<TickerAsset> {
         if (!forceRefresh) memory.freshTicker()?.let { return it }
         return try {
             val assets = api.ticker().assets ?: emptyList()
-            memory.putTicker(assets)
-            diskCache?.saveTicker(assets)
+            withContext(Dispatchers.IO) {
+                memory.putTicker(assets)
+                diskCache?.saveTicker(assets)
+            }
             assets
         } catch (e: Exception) {
             memory.staleTicker() ?: cachedTicker() ?: throw e
@@ -97,13 +111,28 @@ class Repository(
         return try { api.market(id).toMarket() } catch (e: Exception) { null }
     }
 
+    /**
+     * Last book for a token, or null. Only the first paint of the
+     * detail screen reads this: the 5-second live polling always
+     * fetches fresh, so ticking stays live.
+     */
+    fun cachedBook(tokenId: String): BookResponse? =
+        if (tokenId.isBlank()) null else detailCache.book(tokenId)
+
+    /** Last chart for a market, or null. First paint only, as above. */
+    fun cachedChart(marketId: String): ChartResponse? = detailCache.chart(marketId)
+
     suspend fun loadBook(tokenId: String): BookResponse? {
         if (tokenId.isBlank()) return null
-        return try { api.book(tokenId, 20) } catch (e: Exception) { null }
+        return try {
+            api.book(tokenId, 20).also { detailCache.putBook(tokenId, it) }
+        } catch (e: Exception) { null }
     }
 
     suspend fun loadChart(marketId: String): ChartResponse? {
-        return try { api.chart(marketId) } catch (e: Exception) { null }
+        return try {
+            api.chart(marketId).also { detailCache.putChart(marketId, it) }
+        } catch (e: Exception) { null }
     }
 
     suspend fun loadNews(): NewsFeed {
@@ -124,8 +153,15 @@ class Repository(
     }
 
     suspend fun recordForecasts(markets: List<Market>) {
+        // v1.1.9: at most once a minute. The home refresh runs every
+        // 30s and used to recompute the forecast for all 100 markets
+        // and POST them each time; the recorded values only change
+        // once a minute (minutes left), so the extra runs were pure
+        // CPU and network. A failed call does not count as recorded.
+        val nowMs = System.currentTimeMillis()
+        if (!shouldRecordForecasts(lastForecastRecordMs, nowMs)) return
         try {
-            val now = System.currentTimeMillis() / 1000
+            val now = nowMs / 1000
             val items = markets.mapNotNull { m ->
                 val fc = forecastFor(m, now) ?: return@mapNotNull null
                 val p = m.p0 ?: return@mapNotNull null
@@ -143,10 +179,14 @@ class Repository(
                 )
             }
             if (items.isNotEmpty()) api.recordForecasts(mapOf("items" to items))
+            lastForecastRecordMs = nowMs
         } catch (e: Exception) {
             // Recording must never break the app.
         }
     }
+
+    // Last successful forecast record, for the once-a-minute rule.
+    private var lastForecastRecordMs: Long = 0
 }
 
 /**
@@ -154,6 +194,11 @@ class Repository(
  * last real data instantly instead of a spinner. Only real server
  * replies are stored, verbatim JSON, with the time they were fetched.
  * A corrupt or unreadable entry is ignored, never shown as data.
+ *
+ * v1.1.8: the JSON work and the DataStore calls run on IO. They
+ * used to run on the caller's thread, which is the main thread on
+ * every screen, so every refresh did disk IO and a 100-market JSON
+ * build on the thread that draws the screen.
  */
 class MarketDiskCache(private val context: Context) {
     private val marketsJsonKey = stringPreferencesKey("cached_markets_json")
@@ -161,25 +206,25 @@ class MarketDiskCache(private val context: Context) {
     private val tickerJsonKey = stringPreferencesKey("cached_ticker_json")
     private val tickerAtKey = longPreferencesKey("cached_ticker_at_ms")
 
-    suspend fun saveMarkets(markets: List<Market>) {
+    suspend fun saveMarkets(markets: List<Market>) = withContext(Dispatchers.IO) {
         val json = marketsResponseToJson(MarketsResponse(markets.map { it.toDto() }))
         context.dataStore.edit { it[marketsJsonKey] = json; it[marketsAtKey] = System.currentTimeMillis() }
     }
 
-    suspend fun loadMarkets(): List<Market>? {
+    suspend fun loadMarkets(): List<Market>? = withContext(Dispatchers.IO) {
         val prefs = context.dataStore.data.first()
-        val items = marketsResponseFromJson(prefs[marketsJsonKey])?.items ?: return null
-        return items.mapNotNull { it.toMarket() }.ifEmpty { null }
+        val items = marketsResponseFromJson(prefs[marketsJsonKey])?.items ?: return@withContext null
+        items.mapNotNull { it.toMarket() }.ifEmpty { null }
     }
 
-    suspend fun saveTicker(ticker: List<TickerAsset>) {
+    suspend fun saveTicker(ticker: List<TickerAsset>) = withContext(Dispatchers.IO) {
         val json = tickerResponseToJson(TickerResponse(ticker))
         context.dataStore.edit { it[tickerJsonKey] = json; it[tickerAtKey] = System.currentTimeMillis() }
     }
 
-    suspend fun loadTicker(): List<TickerAsset>? {
+    suspend fun loadTicker(): List<TickerAsset>? = withContext(Dispatchers.IO) {
         val prefs = context.dataStore.data.first()
-        return tickerResponseFromJson(prefs[tickerJsonKey])?.assets?.ifEmpty { null }
+        tickerResponseFromJson(prefs[tickerJsonKey])?.assets?.ifEmpty { null }
     }
 }
 
@@ -205,6 +250,17 @@ data class AuthState(
 
 /** An OTP step the auth screen is waiting on, if any. */
 data class OtpPending(val email: String, val purpose: String)
+
+/**
+ * The notice shown after signup verifies. When the password is still
+ * held in memory the app signs in and a login code really is sent;
+ * when the app restarted between signup and verify, the password kept
+ * only in memory is gone, no code is sent, and the notice must say to
+ * log in instead of claiming a code was sent.
+ */
+fun registrationCompleteNotice(email: String, passwordPresent: Boolean): String =
+    if (passwordPresent) "Registration complete. We sent a sign-in code to $email."
+    else "Registration complete. Log in to get your sign-in code."
 
 /**
  * Server auth against auth.php on prognoslabs.xyz (see AuthApi.kt for
@@ -402,6 +458,14 @@ class AuthStore(
                     null
                 }
                 else -> {
+                    // v1.1.10: the account is created. Log it for
+                    // Analytics (coarse only: just that a signup
+                    // happened, never the email or anything
+                    // identifying).
+                    Analytics.logEvent(
+                        AnalyticsEvents.SIGN_UP,
+                        mapOf(AnalyticsEvents.PARAM_METHOD to "email")
+                    )
                     // Signup verified. Tell the user plainly that
                     // registration is complete, then sign in with the
                     // password just used, which sends the login code.
@@ -409,10 +473,17 @@ class AuthStore(
                     // "verify" returns no token by design, so a single
                     // signup code cannot land on the dashboard.
                     _otpPending.value = null
-                    _notice.value = "Registration complete. We sent a sign-in code to ${pending.email}."
                     val pw = pendingPassword
-                    if (pw.isNullOrBlank()) return null
                     pendingPassword = null
+                    if (pw.isNullOrBlank()) {
+                        // The app restarted between signup and verify,
+                        // so the password kept only in memory is gone
+                        // and no code was sent. Say to log in, instead
+                        // of claiming a code was sent.
+                        _notice.value = registrationCompleteNotice(pending.email, passwordPresent = false)
+                        return null
+                    }
+                    _notice.value = registrationCompleteNotice(pending.email, passwordPresent = true)
                     logIn(pending.email, pw)
                 }
             }
@@ -498,6 +569,18 @@ class AlertsStore(private val context: Context) {
     }
 }
 
+/** Anonymous voice-feedback opt-in, toggled from voice settings.
+ * Off by default: nothing is sent while it is off. */
+class VoiceFeedbackStore(private val context: Context) {
+    private val enabledKey = booleanPreferencesKey("voice_feedback_enabled")
+
+    val enabled: Flow<Boolean> = context.dataStore.data.map { it[enabledKey] ?: false }
+
+    suspend fun setEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[enabledKey] = enabled }
+    }
+}
+
 class ThemeStore(private val context: Context) {
     private val darkKey = booleanPreferencesKey("dark_mode")
     val darkMode: Flow<Boolean> = context.dataStore.data.map { it[darkKey] ?: false }
@@ -547,3 +630,10 @@ class FxRatesStore(private val context: Context) {
         context.dataStore.edit { it[jsonKey] = json; it[atKey] = atMs }
     }
 }
+
+/** Once a minute at most: the recorded forecast values only change
+ * once a minute (minutes left), so a record less than a minute after
+ * the last one is pure CPU and network. Pure, so the tests can check
+ * the rule without a network call. */
+fun shouldRecordForecasts(lastRecordMs: Long, nowMs: Long): Boolean =
+    nowMs - lastRecordMs >= 60_000

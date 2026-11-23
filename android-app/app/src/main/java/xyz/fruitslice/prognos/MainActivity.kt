@@ -1,10 +1,14 @@
 package xyz.fruitslice.prognos
 
+import android.Manifest
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
@@ -14,8 +18,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -47,8 +53,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import xyz.fruitslice.prognos.data.Analytics
 import xyz.fruitslice.prognos.ui.AppViewModel
 import xyz.fruitslice.prognos.ui.AuthScreen
+import xyz.fruitslice.prognos.ui.ChangePasswordScreen
 import xyz.fruitslice.prognos.ui.DashboardScreen
 import xyz.fruitslice.prognos.ui.Lime
 import xyz.fruitslice.prognos.ui.MarketDetailScreen
@@ -58,6 +66,8 @@ import xyz.fruitslice.prognos.ui.PortfolioScreen
 import xyz.fruitslice.prognos.ui.PrognosTheme
 import xyz.fruitslice.prognos.ui.SettingsScreen
 import xyz.fruitslice.prognos.ui.SplashScreen
+import xyz.fruitslice.prognos.ui.VoiceEnrollScreen
+import xyz.fruitslice.prognos.ui.VoiceSheetHost
 import xyz.fruitslice.prognos.ui.WalletScreen
 import xyz.fruitslice.prognos.ui.appColors
 import xyz.fruitslice.prognos.data.isLinkedReturnUrl
@@ -68,7 +78,18 @@ class MainActivity : ComponentActivity() {
     private val vm: AppViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // v1.1.9: edge-to-edge on every device. The app draws behind
+        // the status bar and every camera cutout, with transparent
+        // system bars; each screen lays its content out with window
+        // insets (Scaffold padding, navigationBarsPadding on the
+        // bottom bar and the voice sheet, statusBarsPadding on the
+        // sign-in screen), so nothing hides behind a cutout.
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        // v1.1.10: Firebase Analytics. init only swaps in the
+        // Firebase tracker; automatic events (installs, screen
+        // views) start with the app. It never throws.
+        Analytics.init(this)
         // Wallet link page sends the user back here with the trading
         // session in the URL (see WalletLink.kt). Catch it on launch.
         handleLinkedReturn(intent)
@@ -122,6 +143,7 @@ private fun PrognosBottomBar(tabs: List<Tab>, selected: String, onSelect: (Strin
             .fillMaxWidth()
             .background(c.surface)
             .padding(top = 8.dp, bottom = 12.dp)
+            .navigationBarsPadding()
     ) {
         for (t in tabs) {
             val sel = selected == t.route
@@ -188,6 +210,17 @@ fun MainScaffold(vm: AppViewModel) {
     val route = backStack?.destination?.route
     val showBar = route == "dashboard" || route == "markets" || route == "portfolio" || route == "wallet"
 
+    // Voice trading: the mic permission is asked from here, and the
+    // result goes back to the view model, which starts listening.
+    val micPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> vm.onVoicePermissionResult(granted) }
+    LaunchedEffect(Unit) {
+        vm.voicePermissionNeeded.collect {
+            micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
+
     fun goTab(route: String) {
         tab = route
         nav.navigate(route) {
@@ -197,6 +230,28 @@ fun MainScaffold(vm: AppViewModel) {
         }
     }
 
+    // Voice navigation: a spoken "open Bitcoin" or "go to markets"
+    // opens the market or the tab. Tab routes go through goTab so
+    // the bottom bar follows; a market route navigates straight to
+    // the market detail.
+    LaunchedEffect(Unit) {
+        vm.voiceNavRequest.collect { route ->
+            if (route == null) return@collect
+            if (route.startsWith("market/")) {
+                nav.navigate(route)
+            } else {
+                goTab(route)
+            }
+            vm.clearVoiceNavRequest()
+        }
+    }
+
+    // The voice sheet floats above everything, including
+    // the bottom bar, so the mic works the same from every screen.
+    // v1.1.15: the mic entry point is a small button in the header
+    // of every screen, never a floating button over content. The
+    // scaffold carries no mic button any more.
+    Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         bottomBar = {
             if (showBar) {
@@ -238,7 +293,18 @@ fun MainScaffold(vm: AppViewModel) {
                 NotificationsScreen(vm, onBack = { nav.popBackStack() })
             }
             composable("settings") {
-                SettingsScreen(vm, onBack = { nav.popBackStack() })
+                SettingsScreen(
+                    vm,
+                    onBack = { nav.popBackStack() },
+                    onOpenVoiceEnroll = { nav.navigate("voiceEnroll") },
+                    onOpenChangePassword = { nav.navigate("changePassword") }
+                )
+            }
+            composable("changePassword") {
+                ChangePasswordScreen(vm, onBack = { nav.popBackStack() })
+            }
+            composable("voiceEnroll") {
+                VoiceEnrollScreen(vm, onBack = { nav.popBackStack() })
             }
             composable(
                 "market/{id}",
@@ -255,5 +321,10 @@ fun MainScaffold(vm: AppViewModel) {
                 MarketDetailScreen(vm, marketId = id, onBack = { nav.popBackStack() })
             }
         }
+    }
+        VoiceSheetHost(
+            vm,
+            onOpenVoiceEnroll = { vm.startEnrollment(); nav.navigate("voiceEnroll") }
+        )
     }
 }

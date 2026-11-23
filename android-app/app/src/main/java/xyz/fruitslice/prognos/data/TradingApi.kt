@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit
  * link_status (GET ?address=) -> {linked, address}.
  * session_status (GET ?address=, X-Prognos-Session header) -> {ok, address}
  *   when the session belongs to that wallet, 403 otherwise. Read-only,
- *   server-side only: this is how the app checks a session handed back in
+ *   no broker call: this is how the app checks a session handed back in
  *   a redirect before storing it.
  * balance (GET ?address=, X-Prognos-Session header) -> the service reply
  *   passed through.
@@ -330,7 +330,7 @@ class TradingRepository(
 
     /**
      * Checks with the server whether a session token belongs to a
-     * wallet, without placing an order and without trusting the
+     * wallet, without touching the broker and without trusting the
      * caller: only a 2xx from session_status counts. False covers a
      * wrong session, an expired one, and a dead server alike; the
      * caller must treat all three as "do not store".

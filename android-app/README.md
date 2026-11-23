@@ -1,37 +1,15 @@
-# Prognos Labs - Android app (v1.1.5)
+# Prognos Labs - Android app (v1.1.0)
 
 Native Android app for Prognos Labs, in Kotlin with Jetpack Compose.
 Package: `xyz.fruitslice.prognos`. App name: Prognos Labs.
 Min SDK 26, target SDK 34.
 
-## v1.1.5 (current)
-
-versionName 1.1.5, versionCode 15. The wrong-code fix: when the server
-rejected a login code (HTTP 400 / 429), the app treated the error as
-"accounts are not ready yet", so the server's real message never
-reached the screen. A wrong code now says "That code is wrong. Try
-again." The "not ready" message only appears when the backend
-genuinely does not answer.
-
-Tests: 140/140 pass. The APK is published as a GitHub release, not
-committed here:
-
-- APK SHA-256: `a695eb95dfcecc3ac26c3e833e51afbe7d10eb6cd4dc456e693a4f90ede9f90b`
-- Package: `xyz.fruitslice.prognos`, versionCode 15, versionName 1.1.5
-
-v1.1.5 carries everything from v1.1.2 (forgot password, registration
-loop fix, 60 second resend timer, wallet linking, currency and
-default trade size settings, speed fix with cached markets), v1.1.3
-(the forecast format: a short analyst note with a character label,
-never a pick) and v1.1.4 (the real official logo for each of the 8
-listed assets on every market row and detail screen).
-
-## v1.1.0
-renames the old name to Prognos Labs everywhere the user can see it,
+v1.1.0 is the upgrade build: versionName 1.1.0, versionCode 10. It
+renames Prognosis to Prognos Labs everywhere the user can see it,
 wires server auth (signup / login / OTP / password reset) to
 `https://prognoslabs.xyz/auth.php`, and adds the trading client for
 `https://prognoslabs.xyz/api.php` (markets, link, balance, orders,
-positions, place order). Trading stays closed until the server says
+positions, place order). Trading stays locked until the server says
 otherwise: any 401 / 403 / unreachable reply shows "Trading opens
 soon", never a raw error and never fake data. No GitHub release was
 made from this build; that is the coordinator's step after audit.
@@ -42,7 +20,7 @@ this build is `prognos-android-debug-v1.1.0.apk`.
 
 ## What v1.1.0 changes
 
-- Rename: the old name is gone from `app/src/main` (zero occurrences,
+- Rename: "Prognosis" is gone from `app/src/main` (zero occurrences,
   enforced by a unit test that scans the tree). App name, strings,
   splash, auth wordmark, dashboard fallback name, Settings profile
   and About all read "Prognos Labs". Identifiers were renamed too
@@ -99,7 +77,7 @@ this build is `prognos-android-debug-v1.1.0.apk`.
   the wallet must be the one this app asked to link (or one the
   server already confirmed as linked), and the server must confirm
   the session belongs to that wallet (`api.php?action=session_status`,
-  a read-only check that places no order). A planted token, a token
+  a read-only check with no broker call). A planted token, a token
   for a different wallet, or a token the server does not recognise is
   dropped and the user is told to start the link again. Until the site
   sends that redirect, a linked wallet shows as linked in the app but
@@ -119,9 +97,9 @@ this build is `prognos-android-debug-v1.1.0.apk`.
   more, asset dropdown, search, button tabs); real logo v3; bundled
   Archivo + IBM Plex Mono; vector background; no chart line; no LIVE
   pill; white or darks. Copy rules hold everywhere user-visible: no
-  the old name, no chain names or IDs, no "live trading"
+  "Prognosis", no Sepolia, no chain names or IDs, no "live trading"
   hype, no test/prototype wording, no em dashes, no AI-sounding
-  words, no trading-service jargon in `app/src/main`.
+  words, never the word "broker" (zero matches in `app/src/main`).
 
 Tests: 77/77 pass (45 from v1 plus 33 in AuthTradingTest, 6 in
 AuthValidationTest: rename scan (case-insensitive), OTP validation,
@@ -158,10 +136,10 @@ creation fails on a device.
   real phone; the fallback exists if it fails there. Flint's phone
   test is the real proof, as always.
 
-# Prognos Labs - Android app (v1)
+# Prognosis - Android app (v1)
 
 Native Android app for Prognos Labs, in Kotlin with Jetpack Compose.
-Package: `xyz.fruitslice.prognos`. App name: Prognos Labs.
+Package: `xyz.fruitslice.prognos`. App name: Prognosis.
 Min SDK 26, target SDK 34.
 
 v1 is the release build: versionName 1.0.0, versionCode 9 (the 9th
@@ -198,7 +176,7 @@ optimization." Seven points, nothing else redesigned:
    (change password, verified locally, new password minimum 8
    characters, plus Sign out); Appearance (dark mode toggle);
    Notifications (price-alerts toggle, real: it silences the bell
-   dot and the alerts list); About (Prognos Labs, version 1.0.0,
+   dot and the alerts list); About (Prognosis, version 1.0.0,
    "Trading opens soon"). Log out stays at the bottom of Wallet
    too.
 7. General optimization pass on every screen: spacing, alignment
@@ -210,7 +188,7 @@ password validation and the amount input filter). The Settings
 screen navigation is a Compose NavHost route, covered by the build.
 
 Native Android app for Prognos Labs, in Kotlin with Jetpack Compose.
-Package: `xyz.fruitslice.prognos`. App name: Prognos Labs.
+Package: `xyz.fruitslice.prognos`. App name: Prognosis.
 Min SDK 26, target SDK 34.
 
 v8 is a fidelity rebuild of the approved design, not a new design. Flint
@@ -285,9 +263,9 @@ v5 is a design correction on top of v4. Flint rated v4 4/10: the hero sparkline 
 ## What v5 includes
 
 - Background design (`ui/Background.kt`, new in v5, made visible in v7, made a solid image in v8): a lime glow, a giant ribbon-P motif cropped off an edge, and a dot field. The auth and splash screens get the full background; the Wallet screen gets the cropped motif at the bottom right, as the approved preview draws it. The motif is a SOLID image (`motif_light.png` / `motif_dark.png`, rendered from the real logo v3 geometry), not a stroke drawn in code: v7's stroked outline on top of the brightest part of the glow washed out completely on Flint's phone. v8: the glow peaks at 0.65 in both themes (a 340dp circle, centre 0.85w / 0.045h), the motif is at 0.15 light / 0.18 dark (380dp, top:-120, right:-165), the dots are 1.6dp on a 15dp grid at 0.22, and the Wallet motif is 230dp at right:-70, bottom:60, alpha 0.10 (the preview's own placement, read from its markup; v7's 380dp placement showed almost nothing because its visible window contains only a sliver of the P). The alphas are named constants in `BackgroundDesign` and a unit test fails the build if they ever drift back below visibility. No bitmap backgrounds, no blur, no animation, no per-frame work, so it costs almost nothing on an average phone. The real logo is a drawable: `prognos_logo.png` (light) and `prognos_logo_dark.png` (dark), the v3 logo files, used as the image on the splash and auth screens and already used for the launcher icon. No logo is drawn in code anywhere. There is NO dark header band on the Dashboard: the preview's header is plain, and the band was deleted in v8.
-- Fonts (`res/font/`, new in v7): Archivo for text and IBM Plex Mono for prices, labels and countdowns, both OFL licensed, bundled in the APK so the app never inherits the phone's system font. Static instances per weight (Archivo 400/500/600/700/800, Plex Mono 400/500/600/700), subset to Latin + punctuation. `Theme.kt` sets them as the app-wide typeface; every text element uses `Prognos LabsFontFamily` or `Prognos LabsMonoFamily`, or inherits them from the theme. Mono digits are equal width, so changing prices never shift the layout.
+- Fonts (`res/font/`, new in v7): Archivo for text and IBM Plex Mono for prices, labels and countdowns, both OFL licensed, bundled in the APK so the app never inherits the phone's system font. Static instances per weight (Archivo 400/500/600/700/800, Plex Mono 400/500/600/700), subset to Latin + punctuation. `Theme.kt` sets them as the app-wide typeface; every text element uses `PrognosisFontFamily` or `PrognosisMonoFamily`, or inherits them from the theme. Mono digits are equal width, so changing prices never shift the layout.
 - Design system (`ui/Design.kt`): one 8pt spacing scale, 16dp screen padding, 12dp card corners, one type scale (22sp screen title, 17sp section header, 15sp body, 13sp caption, 11sp mono label), one colour system, section headers with a title on the left and a small "See all" action on the right. Every screen aligns to the same left edge and has one primary thing on it. Change pills, auth tabs (one pill container with a sliding active pill), wrapped outlined filter pills, letter circles with bright brand colours, a clean balance card, designed empty states (horizontal: icon left, text middle, action right) and a P&L card.
-- Splash screen, then a designed Log in / Sign up screen: the real logo image (36dp) and "Prognos Labs" wordmark (18sp/800, no subtitle), the headline "Trade the question.", the line "Prediction markets, built for your phone.", a 3-column live prices card (BTC / ETH / SOL from the real ticker, no label, no scrolling strip), pill-container tabs to switch between Log in and Sign up, 60dp fields with a static label and placeholder and an eye icon on the password, and a big primary button (black in light mode, lime in dark mode), plus the centred note and the "No account yet? Create one" link with a lime underline. The whole screen sits on the designed background (lime glow, solid cropped ribbon-P motif, dot field). Auth is local on-device only for now (DataStore Preferences, only a SHA-256 hash of the password is stored, never the password). The auth screen says plainly: "Accounts on this device for now. Server sign-in arrives with trading." If already logged in, the app goes straight to the Dashboard. Log out is at the bottom of the Wallet screen.
+- Splash screen, then a designed Log in / Sign up screen: the real logo image (36dp) and "Prognosis" wordmark (18sp/800, no subtitle), the headline "Trade the question.", the line "Prediction markets, built for your phone.", a 3-column live prices card (BTC / ETH / SOL from the real ticker, no label, no scrolling strip), pill-container tabs to switch between Log in and Sign up, 60dp fields with a static label and placeholder and an eye icon on the password, and a big primary button (black in light mode, lime in dark mode), plus the centred note and the "No account yet? Create one" link with a lime underline. The whole screen sits on the designed background (lime glow, solid cropped ribbon-P motif, dot field). Auth is local on-device only for now (DataStore Preferences, only a SHA-256 hash of the password is stored, never the password). The auth screen says plainly: "Accounts on this device for now. Server sign-in arrives with trading." If already logged in, the app goes straight to the Dashboard. Log out is at the bottom of the Wallet screen.
 - Bottom navigation, 4 items: Dashboard, Markets, Portfolio, Wallet. Custom bar, no Material3 indicator pill: the active tab has a bold label and a lime dot under its icon.
 - Dashboard (redesigned): a plain header with the greeting and your first name, notification bell in a bordered circle (with a lime dot when there is an alert), dark mode toggle in a bordered circle, and an avatar circle with your first letter. No dark band. Below it, a clean dark balance card (total balance $0.00 in large bold type, Deposit and Withdraw inside it as disabled, greyed buttons with lock icons, no chart line, no LIVE pill), a quick actions row (Deposit and Withdraw as disabled circles with lock icons, Trade as an enabled circle with swap arrows), "Your positions" (horizontal empty state with a Browse markets button), "Top movers" as 3 fixed cards in a row (letter circle, code, price, change pill, tap to open Markets), "Watchlist" as rows with letter circles, name and code, price and change pill. No news anywhere on this screen. No ticker tape. Balance is $0.00 and positions are 0. No fake numbers anywhere.
 - Notifications centre (bell): lists price alerts from the server watchdog, each with its market question. Empty state when there is none.
@@ -303,7 +281,7 @@ v5 is a design correction on top of v4. Flint rated v4 4/10: the hero sparkline 
 
 - No Docs tab and no documentation content anywhere. Removed in v2, still gone.
 - No news anywhere in the app. The top-stories strip on the Dashboard is gone, and there is no News tab. (The news API endpoint and its data model still exist in the data layer for compatibility, and a unit test still parses a saved news fixture, but nothing in the app fetches or shows news.)
-- No trading. There are no working Buy or Sell buttons anywhere. The trade panel on the detail screen is inline (Buy Up / Buy Down segmented control, amount, about how many shares), and its "Trading opens soon" button is disabled. Trading is bclosed until the trading service is ready, and none exists yet. Do not expect to place orders from this build.
+- No trading. There are no working Buy or Sell buttons anywhere. The trade panel on the detail screen is inline (Buy Up / Buy Down segmented control, amount, about how many shares), and its "Trading opens soon" button is disabled. Trading is blocked until the trading service is ready, and none exists yet. Do not expect to place orders from this build.
 - No push notifications yet. Price alerts are in the Notifications centre in the app. Telegram is still the alert channel that works outside the app.
 - No iOS build. This is Android only.
 
@@ -320,7 +298,7 @@ Endpoints used: `ticker`, `markets`, `market`, `book`, `chart`, `watchdog`, `lea
 1. Copy `prognos-android-debug.apk` (or `app/build/outputs/apk/debug/app-debug.apk`) to the phone, for example by sending it to yourself or downloading it from a file link.
 2. On the phone, tap the APK file to install it. If you open it from DuckDuckGo, download it in Chrome instead: DuckDuckGo saves it as a `.bin` file and its file provider will not let a file manager copy it out, so the installer never appears.
 3. If Android asks, allow "Install unknown apps" for the app you are installing from (browser or file manager), then tap Install.
-4. Open Prognos Labs from the home screen. Sign up once (name, email, password), then you go straight to the Dashboard. It needs internet to load markets.
+4. Open Prognosis from the home screen. Sign up once (name, email, password), then you go straight to the Dashboard. It needs internet to load markets.
 
 This is a debug build, signed with the debug key. It is for testing, not for the Play Store.
 

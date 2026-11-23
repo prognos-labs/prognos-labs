@@ -17,6 +17,14 @@ object AppConfig {
     const val TRADING_BASE_URL = "https://prognoslabs.xyz/api.php"
 
     /**
+     * Anonymous voice feedback: the app posts the text of phrases
+     * the voice failed to understand here, only when the user opted
+     * in. The endpoint stores the phrase, the language, the app
+     * version and the time, nothing else. See voice-feedback.php.
+     */
+    const val VOICE_FEEDBACK_URL = "https://prognoslabs.xyz/voice-feedback.php"
+
+    /**
      * The page in the system browser where the user links their wallet
      * with a free signature. The app opens this page; the signing
      * happens in the user's own wallet app, never inside this app.

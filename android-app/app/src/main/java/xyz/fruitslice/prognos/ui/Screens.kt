@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LightMode
@@ -52,6 +54,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -69,7 +72,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import xyz.fruitslice.prognos.BuildConfig
+import xyz.fruitslice.prognos.data.AppConfig
 import xyz.fruitslice.prognos.data.DisplayCurrency
 import xyz.fruitslice.prognos.data.MarketFilter
 import xyz.fruitslice.prognos.data.PAGE_SIZE
@@ -78,6 +81,7 @@ import xyz.fruitslice.prognos.data.TradingLock
 import xyz.fruitslice.prognos.data.TradingState
 import xyz.fruitslice.prognos.data.btcEquivalentText
 import xyz.fruitslice.prognos.data.buildForecastContext
+import xyz.fruitslice.prognos.data.dashboardShowsSpinner
 import xyz.fruitslice.prognos.data.filterMarkets
 import xyz.fruitslice.prognos.data.fmtMoney
 import xyz.fruitslice.prognos.data.fmtPrice
@@ -89,7 +93,6 @@ import xyz.fruitslice.prognos.data.pageMarkets
 import xyz.fruitslice.prognos.data.remainingCount
 import xyz.fruitslice.prognos.data.sanitizeAmountInput
 import xyz.fruitslice.prognos.data.topMovers
-import xyz.fruitslice.prognos.data.vipTierLabel
 import xyz.fruitslice.prognos.model.ASSET_LABELS
 import java.time.LocalTime
 
@@ -140,6 +143,7 @@ fun AuthScreen(vm: AppViewModel) {
         AuthBackground()
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 32.dp)
+                .statusBarsPadding()
         ) {
             // Preview: brand row at y62 (status bar ends ~48), logo 36dp,
             // wordmark 18sp/800. No subtitle: the preview has none, and
@@ -498,6 +502,22 @@ fun shortTimeLeft(diffSec: Long): String {
 }
 
 /**
+ * v1.1.8: the market countdown ("3:24 left"), the one text on the
+ * detail screen that ticks every second. It collects the per-second
+ * clock itself, so only this one line recomposes each second; the
+ * rest of the screen reads the per-minute clock and stays still.
+ */
+@Composable
+fun TimeLeftText(vm: AppViewModel, endSec: Long) {
+    val nowSec by vm.nowSec.collectAsState()
+    val c = appColors()
+    Text(
+        shortTimeLeft(if (endSec > 0) endSec - nowSec else 0),
+        fontSize = 12.sp, fontFamily = PrognosMonoFamily, color = c.grey
+    )
+}
+
+/**
  * Quick action, exactly as the preview draws it: a 50dp circle with a
  * 12.5sp/600 label below it. Deposit / Withdraw are pale-lime circles
  * with a lock in light mode; in dark mode Deposit is dark olive with a
@@ -533,7 +553,8 @@ fun DashboardScreen(
 ) {
     val c = appColors()
     val home by vm.home.collectAsState()
-    val nowSec by vm.nowSec.collectAsState()
+    // v1.1.8: the per-second clock was collected here and never used,
+    // so the whole dashboard recomposed every second for nothing.
     val auth by vm.auth.collectAsState()
     val dark by vm.darkMode.collectAsState()
     val alertsOn by vm.alertsEnabled.collectAsState()
@@ -565,7 +586,11 @@ fun DashboardScreen(
     val btcPrice = home.ticker.find { it.asset == "BTC" }?.price
     val btcText = btcEquivalentText(balance, btcPrice)
 
-    Column(modifier = Modifier.fillMaxSize().background(c.background)) {
+    // v1.1.15: the voice mic lives in the header row of every
+    // screen, one small button like the others, never floating
+    // over content. The scaffold carries no mic button any more.
+    Box(modifier = Modifier.fillMaxSize().background(c.background)) {
+    Column(modifier = Modifier.fillMaxSize()) {
         // Preview header: NO dark band. Plain background, greeting 13sp
         // grey + name 19sp/800 on the left; bell (40dp bordered circle with
         // an 8dp lime dot), theme toggle (40dp bordered circle) and an
@@ -619,6 +644,11 @@ fun DashboardScreen(
                 )
             }
             Spacer(modifier = Modifier.width(8.dp))
+            // v1.1.15: the mic is a header button like the bell and
+            // the theme toggle, never a floating button over
+            // content.
+            VoiceMicHeaderButton(onClick = { vm.onMicTapped() })
+            Spacer(modifier = Modifier.width(8.dp))
             // v9: the avatar opens Settings. v8 drew it with no click
             // handler, so tapping it did nothing on Flint's phone.
             Box(
@@ -639,7 +669,11 @@ fun DashboardScreen(
                 )
             }
         }
-        if (home.loading && home.markets.isEmpty()) {
+        // v1.1.14: the spinner shows only when there is no data at
+        // all. The ticker lands first and carries the top movers,
+        // so a dashboard with the ticker in shows the movers at
+        // once while the markets list still loads.
+        if (dashboardShowsSpinner(home.loading, home.markets.isEmpty(), home.ticker.isEmpty())) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = c.ink)
             }
@@ -715,7 +749,7 @@ fun DashboardScreen(
                     HorizontalEmptyState(
                         Icons.Filled.ShowChart,
                         "No open positions yet",
-                        "Trading opens soon.",
+                        "Your positions will show here.",
                         "Browse markets",
                         onBrowseMarkets
                     )
@@ -767,13 +801,17 @@ fun DashboardScreen(
             item { Spacer(modifier = Modifier.height(16.dp)) }
         }
     }
+    }
 }
 
 @Composable
 fun MarketsScreen(vm: AppViewModel, onOpenMarket: (String) -> Unit) {
     val c = appColors()
     val home by vm.home.collectAsState()
-    val nowSec by vm.nowSec.collectAsState()
+    // v1.1.8: the per-second clock was collected here and passed to
+    // every market row, which never used it, so the whole list
+    // recomposed every second for nothing. Rows now read the
+    // per-minute clock only where a time is shown.
     val watchIds by vm.watchlist.ids.collectAsState(initial = emptySet())
     var query by remember { mutableStateOf("") }
     var filter by remember { mutableStateOf(MarketFilter.ALL) }
@@ -807,7 +845,19 @@ fun MarketsScreen(vm: AppViewModel, onOpenMarket: (String) -> Unit) {
     val displayed = remember(visible, shown) { pageMarkets(visible, shown) }
     val sectorLabel = if (sector == "all") "All assets" else sectors.find { it.first == sector }?.second ?: "All assets"
 
-    Column(modifier = Modifier.fillMaxSize().background(c.background)) {
+    Box(modifier = Modifier.fillMaxSize().background(c.background)) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        // v1.1.15: the mic is a header button in the layout, never
+        // a floating button over the rows. The header sits above
+        // the loading and error gates, like the dashboard header,
+        // so the mic is there even while the list loads.
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = ScreenPad).padding(top = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Markets", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = c.ink, modifier = Modifier.weight(1f))
+            VoiceMicHeaderButton(onClick = { vm.onMicTapped() })
+        }
         if (home.loading && home.markets.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = c.ink)
@@ -915,7 +965,7 @@ fun MarketsScreen(vm: AppViewModel, onOpenMarket: (String) -> Unit) {
             } else {
                 items(displayed, key = { it.id }) { m ->
                     MarketRow(
-                        market = m, nowSec = nowSec,
+                        market = m,
                         starred = watchIds.contains(m.id),
                         onStar = { vm.toggleWatch(m.id) },
                         onClick = { onOpenMarket(m.id) },
@@ -951,6 +1001,7 @@ fun MarketsScreen(vm: AppViewModel, onOpenMarket: (String) -> Unit) {
             item { Spacer(modifier = Modifier.height(24.dp)) }
         }
     }
+    }
 }
 
 @Composable
@@ -970,7 +1021,15 @@ fun PortfolioScreen(vm: AppViewModel, onBrowseMarkets: () -> Unit) {
     ) {
         Spacer(modifier = Modifier.height(12.dp))
         // Preview: title ~22px, not 28sp.
-        Text("Portfolio", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = c.ink)
+        // v1.1.15: the mic is a header button in the layout,
+        // never a floating button over content.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Portfolio", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = c.ink, modifier = Modifier.weight(1f))
+            VoiceMicHeaderButton(onClick = { vm.onMicTapped() })
+        }
         Spacer(modifier = Modifier.height(16.dp))
         BalanceCard(
             title = "Total balance",
@@ -1021,7 +1080,7 @@ fun PortfolioScreen(vm: AppViewModel, onBrowseMarkets: () -> Unit) {
             HorizontalEmptyState(
                 Icons.Filled.ShowChart,
                 "No open positions yet",
-                "Trading opens soon.",
+                "Your positions will show here.",
                 "Browse markets",
                 onBrowseMarkets
             )
@@ -1049,7 +1108,10 @@ fun NotificationsScreen(vm: AppViewModel, onBack: () -> Unit) {
         Spacer(modifier = Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = c.ink) }
-            Text("Notifications", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = c.ink)
+            Text("Notifications", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = c.ink, modifier = Modifier.weight(1f))
+            // v1.1.15: the mic is a header button in the layout,
+            // never a floating button over content.
+            VoiceMicHeaderButton(onClick = { vm.onMicTapped() })
         }
         Spacer(modifier = Modifier.height(16.dp))
         // v9: the price-alerts toggle in Settings is real. When alerts
@@ -1102,24 +1164,92 @@ fun NotificationsScreen(vm: AppViewModel, onBack: () -> Unit) {
  *  Profile, Authentication (change password + sign out), Appearance
  *  (dark mode), Notifications (price-alerts toggle), About. Same card
  *  style, spacing and fonts as the rest of the app. */
+/**
+ * v1.1.14: the four account settings that live as compact drop-down
+ * rows in Settings, in order. Each row is one small header that
+ * expands in place; the content behind it is unchanged.
+ */
+enum class SettingsRowId(val title: String) {
+    WALLET("Link wallet"),
+    CHANGE_PASSWORD("Change password"),
+    CURRENCY("Currency"),
+    TRADE_SIZE("Default trade size")
+}
+
+/** The four drop-down rows, in the order Settings shows them. */
+fun settingsDropDownRows(): List<SettingsRowId> = SettingsRowId.entries.toList()
+
+/**
+ * One compact settings row: a single header line with the setting
+ * name, its current value and a chevron, expanding in place to the
+ * setting itself. Closed it is one short row; open it shows only
+ * that setting, never a large menu block.
+ */
 @Composable
-fun SettingsScreen(vm: AppViewModel, onBack: () -> Unit) {
+fun SettingsDropDownRow(
+    row: SettingsRowId,
+    summary: String,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    val c = appColors()
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = c.surface),
+        shape = RoundedCornerShape(CardRadius),
+        border = androidx.compose.foundation.BorderStroke(1.dp, c.border),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onToggle() }
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(row.title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = c.ink)
+                Spacer(modifier = Modifier.weight(1f))
+                Text(summary, fontSize = 14.sp, color = c.grey)
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    Icons.Filled.ArrowDropDown,
+                    contentDescription = if (expanded) "Collapse" else "Expand",
+                    tint = c.grey,
+                    modifier = Modifier
+                        .size(22.dp)
+                        .graphicsLayer { rotationZ = if (expanded) 180f else 0f }
+                )
+            }
+            if (expanded) {
+                HorizontalDivider(color = c.border)
+                Column(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+                    content()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsScreen(
+    vm: AppViewModel,
+    onBack: () -> Unit,
+    onOpenVoiceEnroll: () -> Unit = {},
+    onOpenChangePassword: () -> Unit = {}
+) {
     val c = appColors()
     val auth by vm.auth.collectAsState()
     val dark by vm.darkMode.collectAsState()
+    val voiceEnrolled by vm.voiceEnrolled.collectAsState()
     val alertsOn by vm.alertsEnabled.collectAsState()
-    val settingsMessage by vm.settingsMessage.collectAsState()
-    val settingsIsError by vm.settingsMessageIsError.collectAsState()
-    val resetPending by vm.otpPending.collectAsState()
     val link by vm.link.collectAsState()
     val currency by vm.displayCurrency.collectAsState()
-    val rates by vm.rates.collectAsState()
     val defaultAmount by vm.defaultTradeAmount.collectAsState()
-    var resetCode by remember { mutableStateOf("") }
-    var newPassword by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
-    var currencyExpanded by remember { mutableStateOf(false) }
+    val feedbackOptIn by vm.voiceFeedbackOptIn.collectAsState()
     var tradeSizeInput by remember(defaultAmount) { mutableStateOf(defaultAmount) }
+    var expandedRow by remember { mutableStateOf<SettingsRowId?>(null) }
 
     val initial = (auth.name.trim().take(1).ifBlank { auth.email.trim().take(1) }.ifBlank { "P" }).uppercase()
     val displayName = auth.name.trim().ifBlank { "Prognos Labs" }
@@ -1137,6 +1267,10 @@ fun SettingsScreen(vm: AppViewModel, onBack: () -> Unit) {
             }
             Spacer(modifier = Modifier.width(12.dp))
             Text("Settings", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = c.ink)
+            // v1.1.15: the mic is a header button in the layout,
+            // never a floating button over the voice toggle.
+            Spacer(modifier = Modifier.weight(1f))
+            VoiceMicHeaderButton(onClick = { vm.onMicTapped() })
         }
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -1177,255 +1311,216 @@ fun SettingsScreen(vm: AppViewModel, onBack: () -> Unit) {
                 }
             }
         }
-        Spacer(modifier = Modifier.height(SectionGap))
-
-        SectionHeader("Wallet")
-        Spacer(modifier = Modifier.height(8.dp))
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = c.surface),
-            shape = RoundedCornerShape(CardRadius),
-            border = androidx.compose.foundation.BorderStroke(1.dp, c.border),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-        ) {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                if (link.linkedAddress != null) {
-                    val short = link.linkedAddress!!.let {
-                        if (it.length > 12) it.take(6) + "..." + it.takeLast(4) else it
-                    }
-                    Text("Linked wallet", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = c.ink)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(short, fontSize = 14.sp, fontFamily = PrognosMonoFamily, color = c.grey)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        "To change it, enter the new wallet below and sign the link message in your browser. The old wallet stays linked until the new one is confirmed.",
-                        fontSize = 13.sp, color = c.grey
-                    )
-                } else {
-                    Text("No wallet linked", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = c.ink)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        "Link a wallet to start trading. Linking is a free signature in your own wallet app.",
-                        fontSize = 13.sp, color = c.grey
-                    )
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                AuthField(
-                    label = "Wallet address",
-                    value = link.address,
-                    onValueChange = { vm.setLinkAddress(it) },
-                    placeholder = "0x..."
-                )
-                if (link.message != null) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        link.message!!,
-                        color = if (link.isError) AskRed else BidGreen,
-                        fontSize = 14.sp
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = { vm.startWalletLink() },
-                    enabled = !link.checking,
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (dark) Lime else c.primary,
-                        contentColor = if (dark) Color(0xFF111111) else c.onPrimary
-                    )
-                ) { Text(if (link.linkedAddress != null) "Change wallet" else "Link wallet", fontWeight = FontWeight.Bold, fontSize = 15.sp) }
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedButton(
-                    onClick = { vm.checkWalletLink() },
-                    enabled = !link.checking,
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = c.ink)
-                ) { Text("Check link", fontWeight = FontWeight.Bold, fontSize = 15.sp) }
-            }
-        }
-        Spacer(modifier = Modifier.height(SectionGap))
-
-        SectionHeader("Currency")
-        Spacer(modifier = Modifier.height(8.dp))
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = c.surface),
-            shape = RoundedCornerShape(CardRadius),
-            border = androidx.compose.foundation.BorderStroke(1.dp, c.border),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-        ) {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                Text("Display currency", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = c.ink)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    "Balances are shown in this currency. Amounts are still held in USD; the rate is fetched live and refreshed hourly.",
-                    fontSize = 13.sp, color = c.grey
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Box {
-                    OutlinedButton(
-                        onClick = { currencyExpanded = true },
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = c.ink)
-                    ) {
-                        Text(currency.label, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                        Spacer(modifier = Modifier.weight(1f))
-                        Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = c.ink)
-                    }
-                    DropdownMenu(
-                        expanded = currencyExpanded,
-                        onDismissRequest = { currencyExpanded = false }
-                    ) {
-                        for (opt in DisplayCurrency.entries) {
-                            DropdownMenuItem(
-                                text = { Text(opt.label) },
-                                onClick = {
-                                    currencyExpanded = false
-                                    vm.setDisplayCurrency(opt.code)
-                                }
-                            )
-                        }
-                    }
-                }
-                if (currency != DisplayCurrency.USD && rates == null) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        "Exchange rates are not available right now. Balances are shown in USD until they load.",
-                        fontSize = 13.sp, color = c.grey
-                    )
-                }
-            }
-        }
-        Spacer(modifier = Modifier.height(SectionGap))
-
-        SectionHeader("VIP")
-        Spacer(modifier = Modifier.height(8.dp))
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = c.surface),
-            shape = RoundedCornerShape(CardRadius),
-            border = androidx.compose.foundation.BorderStroke(1.dp, c.border),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-        ) {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                Text("Your tier: ${vipTierLabel()}", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = c.ink)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    "Prognos Labs has no VIP programme yet, so every account is Standard. There are no tiers, benefits or perks to unlock.",
-                    fontSize = 13.sp, color = c.grey
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(SectionGap))
-
-        SectionHeader("Trading")
-        Spacer(modifier = Modifier.height(8.dp))
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = c.surface),
-            shape = RoundedCornerShape(CardRadius),
-            border = androidx.compose.foundation.BorderStroke(1.dp, c.border),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-        ) {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                Text("Default trade size", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = c.ink)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    "The amount a new trade starts with, in USD. You can still change it on the market screen.",
-                    fontSize = 13.sp, color = c.grey
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                AuthField(
-                    label = "Amount (USD)",
-                    value = tradeSizeInput,
-                    onValueChange = { tradeSizeInput = sanitizeAmountInput(it); vm.clearSettingsMessage() },
-                    placeholder = "10.00",
-                    keyboardType = KeyboardType.Decimal
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = { vm.setDefaultTradeAmount(tradeSizeInput) },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (dark) Lime else c.primary,
-                        contentColor = if (dark) Color(0xFF111111) else c.onPrimary
-                    )
-                ) { Text("Save default size", fontWeight = FontWeight.Bold, fontSize = 15.sp) }
-            }
-        }
-        Spacer(modifier = Modifier.height(SectionGap))
-
-        SectionHeader("Authentication")
-        Spacer(modifier = Modifier.height(8.dp))
-        // The server has no change-password call, so changing a password
-        // goes through the reset flow: a code is sent to the signed-in
-        // email, and the code is the check. No current password is
-        // needed, and none is stored on this device.
-        if (resetPending?.purpose == "reset") {
-            AuthField(
-                label = "Code",
-                value = resetCode,
-                onValueChange = { resetCode = it.filter { ch -> ch.isDigit() }.take(6); vm.clearSettingsMessage() },
-                placeholder = "6-digit code",
-                keyboardType = KeyboardType.NumberPassword
-            )
-            Spacer(modifier = Modifier.height(14.dp))
-        }
-        AuthField(
-            label = "New password",
-            value = newPassword,
-            onValueChange = { newPassword = it; vm.clearSettingsMessage() },
-            placeholder = "At least 8 characters",
-            isPassword = true,
-            keyboardType = KeyboardType.Password
-        )
-        Spacer(modifier = Modifier.height(14.dp))
-        AuthField(
-            label = "Confirm new password",
-            value = confirmPassword,
-            onValueChange = { confirmPassword = it; vm.clearSettingsMessage() },
-            placeholder = "Repeat the new password",
-            isPassword = true,
-            keyboardType = KeyboardType.Password
-        )
-        if (settingsMessage != null) {
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                settingsMessage!!,
-                color = if (settingsIsError) AskRed else BidGreen,
-                fontSize = 14.sp
-            )
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(
-            onClick = {
-                if (resetPending?.purpose == "reset") {
-                    vm.confirmNewPassword(resetCode, newPassword, confirmPassword)
-                    resetCode = ""
-                    newPassword = ""
-                    confirmPassword = ""
-                } else {
-                    vm.changePassword(newPassword, confirmPassword)
-                }
-            },
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = if (dark) Lime else c.primary,
-                contentColor = if (dark) Color(0xFF111111) else c.onPrimary
-            )
-        ) { Text(if (resetPending?.purpose == "reset") "Change password" else "Send code", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
         Spacer(modifier = Modifier.height(12.dp))
-        OutlinedButton(
-            onClick = { vm.logOut() },
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = c.ink)
-        ) { Text("Sign out", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = c.surface),
+            shape = RoundedCornerShape(CardRadius),
+            border = androidx.compose.foundation.BorderStroke(1.dp, c.border),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                Text(
+                    "Sign out",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = AskRed,
+                    modifier = Modifier.clickable { vm.logOut() }
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(SectionGap))
+
+        // v1.1.14: wallet, change password, currency and default trade
+        // size are small compact drop-down rows that expand in place,
+        // not large menu blocks. One row open at a time.
+        SectionHeader("Account")
+        Spacer(modifier = Modifier.height(8.dp))
+        val linkedShort = link.linkedAddress?.let {
+            if (it.length > 12) it.take(6) + "..." + it.takeLast(4) else it
+        }
+        SettingsDropDownRow(
+            row = SettingsRowId.WALLET,
+            summary = linkedShort ?: "Not linked",
+            expanded = expandedRow == SettingsRowId.WALLET,
+            onToggle = { expandedRow = if (expandedRow == SettingsRowId.WALLET) null else SettingsRowId.WALLET }
+        ) {
+            if (link.linkedAddress != null) {
+                Text("Linked wallet", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = c.ink)
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(linkedShort ?: "", fontSize = 13.sp, fontFamily = PrognosMonoFamily, color = c.grey)
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+            AuthField(
+                label = "Wallet address",
+                value = link.address,
+                onValueChange = { vm.setLinkAddress(it) },
+                placeholder = "0x..."
+            )
+            if (link.message != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    link.message!!,
+                    color = if (link.isError) AskRed else BidGreen,
+                    fontSize = 13.sp
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Button(
+                onClick = { vm.startWalletLink() },
+                enabled = !link.checking,
+                modifier = Modifier.fillMaxWidth().height(44.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (dark) Lime else c.primary,
+                    contentColor = if (dark) Color(0xFF111111) else c.onPrimary
+                )
+            ) { Text(if (link.linkedAddress != null) "Change wallet" else "Link wallet", fontWeight = FontWeight.Bold, fontSize = 14.sp) }
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = { vm.checkWalletLink() },
+                enabled = !link.checking,
+                modifier = Modifier.fillMaxWidth().height(44.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = c.ink)
+            ) { Text("Check link", fontWeight = FontWeight.Bold, fontSize = 14.sp) }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        SettingsDropDownRow(
+            row = SettingsRowId.CHANGE_PASSWORD,
+            summary = "Code by email",
+            expanded = expandedRow == SettingsRowId.CHANGE_PASSWORD,
+            onToggle = { expandedRow = if (expandedRow == SettingsRowId.CHANGE_PASSWORD) null else SettingsRowId.CHANGE_PASSWORD }
+        ) {
+            // The request flow itself lives on its own screen: a code
+            // goes to the signed-in email, then the code step, then
+            // the new password. It is never a tab on this page.
+            Text(
+                "A code goes to ${auth.email}. Enter it, then set your new password.",
+                fontSize = 14.sp,
+                color = c.grey
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Button(
+                onClick = { onOpenChangePassword() },
+                modifier = Modifier.fillMaxWidth().height(44.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (dark) Lime else c.primary,
+                    contentColor = if (dark) Color(0xFF111111) else c.onPrimary
+                )
+            ) { Text("Change password", fontWeight = FontWeight.Bold, fontSize = 14.sp) }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        SettingsDropDownRow(
+            row = SettingsRowId.CURRENCY,
+            summary = currency.label,
+            expanded = expandedRow == SettingsRowId.CURRENCY,
+            onToggle = { expandedRow = if (expandedRow == SettingsRowId.CURRENCY) null else SettingsRowId.CURRENCY }
+        ) {
+            for (opt in DisplayCurrency.entries) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().clickable {
+                        expandedRow = null
+                        vm.setDisplayCurrency(opt.code)
+                    }.padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(opt.label, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = c.ink)
+                    Spacer(modifier = Modifier.weight(1f))
+                    if (opt == currency) {
+                        Text("Selected", fontSize = 13.sp, color = BidGreen)
+                    }
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        SettingsDropDownRow(
+            row = SettingsRowId.TRADE_SIZE,
+            summary = "$" + defaultAmount,
+            expanded = expandedRow == SettingsRowId.TRADE_SIZE,
+            onToggle = { expandedRow = if (expandedRow == SettingsRowId.TRADE_SIZE) null else SettingsRowId.TRADE_SIZE }
+        ) {
+            AuthField(
+                label = "Amount (USD)",
+                value = tradeSizeInput,
+                onValueChange = { tradeSizeInput = sanitizeAmountInput(it); vm.clearSettingsMessage() },
+                placeholder = "10.00",
+                keyboardType = KeyboardType.Decimal
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Button(
+                onClick = { vm.setDefaultTradeAmount(tradeSizeInput) },
+                modifier = Modifier.fillMaxWidth().height(44.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (dark) Lime else c.primary,
+                    contentColor = if (dark) Color(0xFF111111) else c.onPrimary
+                )
+            ) { Text("Save default size", fontWeight = FontWeight.Bold, fontSize = 14.sp) }
+        }
+        Spacer(modifier = Modifier.height(SectionGap))
+
+        // Voice trading (v1.1.7): enrollment, voice lock, history.
+        SectionHeader("Voice")
+        Spacer(modifier = Modifier.height(8.dp))
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = c.surface),
+            shape = RoundedCornerShape(CardRadius),
+            border = androidx.compose.foundation.BorderStroke(1.dp, c.border),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                Button(
+                    onClick = { vm.startEnrollment(); onOpenVoiceEnroll() },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (dark) Lime else c.primary,
+                        contentColor = if (dark) Color(0xFF111111) else c.onPrimary
+                    )
+                ) { Text(if (voiceEnrolled) "Re-do voice setup" else "Set up your voice", fontWeight = FontWeight.Bold, fontSize = 15.sp) }
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(color = c.border)
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Help improve voice", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = c.ink)
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            "When on, the app sends back only the text of phrases the voice did not understand, so the voice can be improved. No audio, no name, nothing that identifies you.",
+                            fontSize = 13.sp,
+                            color = c.grey
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Switch(
+                        checked = feedbackOptIn,
+                        onCheckedChange = { vm.setVoiceFeedbackOptIn(it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color(0xFF111111),
+                            checkedTrackColor = Lime,
+                            uncheckedThumbColor = Color.White,
+                            uncheckedTrackColor = c.grey2
+                        )
+                    )
+                }
+                if (voiceEnrolled) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Remove voice setup",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AskRed,
+                        modifier = Modifier.clickable { vm.resetVoiceEnrollment() }
+                    )
+                }
+            }
+        }
         Spacer(modifier = Modifier.height(SectionGap))
 
         SectionHeader("Appearance")
@@ -1501,11 +1596,173 @@ fun SettingsScreen(vm: AppViewModel, onBack: () -> Unit) {
         ) {
             Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                 Text("Prognos Labs", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = c.ink)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text("Version ${BuildConfig.VERSION_NAME}", fontSize = 14.sp, color = c.grey)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text("Trading opens soon.", fontSize = 14.sp, color = c.grey)
             }
+        }
+        Spacer(modifier = Modifier.height(32.dp))
+    }
+}
+
+/**
+ * Change password, as its own request flow (v1.1.12: no longer a
+ * section on the profile page). Step 1: a code goes to the
+ * signed-in email. Step 2: the code. Step 3: the new password.
+ * Leaving the flow clears the code state.
+ */
+@Composable
+fun ChangePasswordScreen(vm: AppViewModel, onBack: () -> Unit) {
+    val c = appColors()
+    val dark by vm.darkMode.collectAsState()
+    val auth by vm.auth.collectAsState()
+    val pending by vm.otpPending.collectAsState()
+    val resetEmail by vm.resetStep.collectAsState()
+    val message by vm.settingsMessage.collectAsState()
+    val isError by vm.settingsMessageIsError.collectAsState()
+    val busy by vm.authBusy.collectAsState()
+    val done by vm.changePasswordDone.collectAsState()
+    var code by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    DisposableEffect(Unit) { onDispose { vm.clearChangePasswordFlow() } }
+
+    Column(modifier = Modifier.fillMaxSize().background(c.background).verticalScroll(rememberScrollState()).padding(horizontal = ScreenPad)) {
+        Spacer(modifier = Modifier.height(12.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier.size(40.dp)
+                    .border(1.dp, c.border, RoundedCornerShape(20.dp))
+                    .clickable { onBack() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = c.ink, modifier = Modifier.size(20.dp))
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Text("Change password", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = c.ink)
+            // v1.1.15: the mic is a header button in the layout,
+            // never a floating button over content.
+            Spacer(modifier = Modifier.weight(1f))
+            VoiceMicHeaderButton(onClick = { vm.onMicTapped() })
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        if (done) {
+            Text("Password changed.", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = c.ink)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "Use your new password next time you sign in.",
+                fontSize = 14.sp,
+                color = c.grey
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            Button(
+                onClick = { onBack() },
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (dark) Lime else c.primary,
+                    contentColor = if (dark) Color(0xFF111111) else c.onPrimary
+                )
+            ) { Text("Done", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+        } else if (resetEmail != null) {
+            // Step 3: the code was verified, now set the new password.
+            Text("Set a new password.", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = c.ink)
+            Spacer(modifier = Modifier.height(6.dp))
+            Text("For $resetEmail.", fontSize = 14.sp, color = c.grey)
+            Spacer(modifier = Modifier.height(16.dp))
+            AuthField(
+                label = "New password",
+                value = newPassword,
+                onValueChange = { newPassword = it; vm.clearSettingsMessage() },
+                placeholder = "At least 8 characters",
+                isPassword = true,
+                keyboardType = KeyboardType.Password
+            )
+            Spacer(modifier = Modifier.height(14.dp))
+            AuthField(
+                label = "Confirm new password",
+                value = confirmPassword,
+                onValueChange = { confirmPassword = it; vm.clearSettingsMessage() },
+                placeholder = "Repeat the new password",
+                isPassword = true,
+                keyboardType = KeyboardType.Password
+            )
+            if (message != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(message!!, color = if (isError) AskRed else BidGreen, fontSize = 14.sp)
+            }
+            Spacer(modifier = Modifier.height(20.dp))
+            Button(
+                onClick = { vm.saveNewPasswordAfterChange(newPassword, confirmPassword) },
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (dark) Lime else c.primary,
+                    contentColor = if (dark) Color(0xFF111111) else c.onPrimary
+                )
+            ) { Text("Save new password", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+        } else if (pending?.purpose == "reset") {
+            // Step 2: the code from the email.
+            Text("Enter the code.", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = c.ink)
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                "A 6-digit code was sent to ${pending!!.email}. Enter it to change your password.",
+                fontSize = 14.sp,
+                color = c.grey
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            AuthField(
+                label = "Code",
+                value = code,
+                onValueChange = { code = it.filter { ch -> ch.isDigit() }.take(6); vm.clearSettingsMessage() },
+                placeholder = "6-digit code",
+                keyboardType = KeyboardType.NumberPassword
+            )
+            if (message != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(message!!, color = if (isError) AskRed else BidGreen, fontSize = 14.sp)
+            }
+            Spacer(modifier = Modifier.height(20.dp))
+            Button(
+                onClick = { vm.verifyChangePasswordCode(code) },
+                enabled = !busy && code.length == 6,
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (dark) Lime else c.primary,
+                    contentColor = if (dark) Color(0xFF111111) else c.onPrimary
+                )
+            ) { Text("Verify code", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                "Send a new code",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().clickable { code = ""; vm.requestChangePasswordCode() }
+            )
+        } else {
+            // Step 1: request the code.
+            Text("Change your password.", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = c.ink)
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                "We will send a 6-digit code to ${auth.email}. Enter it, then set your new password.",
+                fontSize = 14.sp,
+                color = c.grey
+            )
+            if (message != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(message!!, color = if (isError) AskRed else BidGreen, fontSize = 14.sp)
+            }
+            Spacer(modifier = Modifier.height(20.dp))
+            Button(
+                onClick = { vm.requestChangePasswordCode() },
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (dark) Lime else c.primary,
+                    contentColor = if (dark) Color(0xFF111111) else c.onPrimary
+                )
+            ) { Text("Send code", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
         }
         Spacer(modifier = Modifier.height(32.dp))
     }
@@ -1516,7 +1773,12 @@ fun MarketDetailScreen(vm: AppViewModel, marketId: String, onBack: () -> Unit) {
     val c = appColors()
     val detail by vm.detail.collectAsState()
     val home by vm.home.collectAsState()
-    val nowSec by vm.nowSec.collectAsState()
+    // v1.1.8: the detail screen reads the per-minute clock. The
+    // forecast text only changes once a minute, so the forecast card
+    // recomputes at most once a minute instead of every second. The
+    // countdown text below reads the per-second clock through its own
+    // small composable, so only that one line ticks each second.
+    val nowMinute by vm.nowMinute.collectAsState()
     val tradeSides by vm.tradeSides.collectAsState()
     val tradingState by vm.tradingState.collectAsState()
     val tradeMessage by vm.tradeMessage.collectAsState()
@@ -1529,7 +1791,8 @@ fun MarketDetailScreen(vm: AppViewModel, marketId: String, onBack: () -> Unit) {
     // does not rewrite the preference.
     var amount by remember(defaultAmount) { mutableStateOf(defaultAmount) }
 
-    Column(modifier = Modifier.fillMaxSize().background(c.background).verticalScroll(rememberScrollState()).padding(horizontal = ScreenPad)) {
+    Box(modifier = Modifier.fillMaxSize().background(c.background)) {
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = ScreenPad)) {
         Spacer(modifier = Modifier.height(12.dp))
         // Preview: back button in a circle outline + "Markets" grey text.
         // No star: the preview has none.
@@ -1544,6 +1807,10 @@ fun MarketDetailScreen(vm: AppViewModel, marketId: String, onBack: () -> Unit) {
             }
             Spacer(modifier = Modifier.width(12.dp))
             Text("Markets", fontSize = 15.sp, color = c.grey)
+            // v1.1.15: the mic is a header button in the layout,
+            // never a floating button over content.
+            Spacer(modifier = Modifier.weight(1f))
+            VoiceMicHeaderButton(onClick = { vm.onMicTapped() })
         }
         if (detail.loading && market == null) {
             Box(modifier = Modifier.fillMaxWidth().padding(top = 48.dp), contentAlignment = Alignment.Center) {
@@ -1577,10 +1844,7 @@ fun MarketDetailScreen(vm: AppViewModel, marketId: String, onBack: () -> Unit) {
             Spacer(modifier = Modifier.width(8.dp))
             Box(modifier = Modifier.size(8.dp).background(BidGreen, RoundedCornerShape(4.dp)))
             Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                shortTimeLeft(if (market.end > 0) market.end - nowSec else 0),
-                fontSize = 12.sp, fontFamily = PrognosMonoFamily, color = c.grey
-            )
+            TimeLeftText(vm, market.end)
         }
         Spacer(modifier = Modifier.height(16.dp))
         // Preview: big asset price + change pill. v7 showed the two outcome
@@ -1592,7 +1856,7 @@ fun MarketDetailScreen(vm: AppViewModel, marketId: String, onBack: () -> Unit) {
         }
         Spacer(modifier = Modifier.height(16.dp))
         ForecastCard(
-            market, nowSec,
+            market, nowMinute * 60,
             buildForecastContext(market, home.ticker, home.news, detail.bookUp, detail.bookDown, detail.chart)
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -1719,7 +1983,7 @@ fun MarketDetailScreen(vm: AppViewModel, marketId: String, onBack: () -> Unit) {
                 when {
                     tradeBusy -> "Placing order..."
                     tradingReady -> if (selectedSide == TradeSide.UP) "Buy Up" else "Sell Down"
-                    else -> "Trading opens soon"
+                    else -> AppConfig.TRADING_OPENS_SOON
                 },
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp
@@ -1736,6 +2000,7 @@ fun MarketDetailScreen(vm: AppViewModel, marketId: String, onBack: () -> Unit) {
             )
         }
         Spacer(modifier = Modifier.height(32.dp))
+    }
     }
 }
 
@@ -1757,7 +2022,15 @@ fun WalletScreen(vm: AppViewModel) {
         ) {
             Spacer(modifier = Modifier.height(12.dp))
             // Preview: title ~22px, not 28sp.
-            Text("Wallet", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = c.ink)
+            // v1.1.15: the mic is a header button in the layout,
+            // never a floating button over content.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Wallet", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = c.ink, modifier = Modifier.weight(1f))
+                VoiceMicHeaderButton(onClick = { vm.onMicTapped() })
+            }
             Spacer(modifier = Modifier.height(16.dp))
             // Preview: balance card with NO buttons inside it.
             BalanceCard(

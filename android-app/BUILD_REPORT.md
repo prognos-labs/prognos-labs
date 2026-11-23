@@ -1,27 +1,9 @@
-# Prognos Labs Android app - Build report (v1.1.5, debug)
-
-Built 21 Nov 2026 on the test box. Result: **BUILD SUCCESSFUL**,
-tests **140/140 pass**.
-
-v1.1.5: versionName 1.1.5, versionCode 15. The wrong-code fix: a
-server rejection of a login code (HTTP 400 / 429) was caught as
-"not ready", so the server's wrong-code message never reached the
-screen. A wrong code now says "That code is wrong. Try again." The
-"not ready" message only shows when the backend genuinely does not
-answer.
-
-- APK SHA-256: `a695eb95dfcecc3ac26c3e833e51afbe7d10eb6cd4dc456e693a4f90ede9f90b`
-- Package: `xyz.fruitslice.prognos`, versionCode 15, versionName 1.1.5
-- The APK is published as a GitHub release, not committed to the repo.
-
----
-
 # Prognos Labs Android app - Build report (v1.1.0, debug)
 
 Built 20 Nov 2026, early morning WAT. Result: **BUILD SUCCESSFUL**.
 
-v1.1.0: versionName 1.1.0, versionCode 10. Rename the old name to
-Prognos Labs everywhere user-visible (zero old-name mentions in
+v1.1.0: versionName 1.1.0, versionCode 10. Rename Prognosis to
+Prognos Labs everywhere user-visible (zero "Prognosis" in
 `app/src/main`, enforced by a unit test), server auth to
 `https://prognoslabs.xyz/auth.php` (signup / login / OTP / password
 reset, token in EncryptedSharedPreferences with a plain
@@ -83,12 +65,12 @@ assetlinks.json for chooser-free https return). Nothing is faked.
 - Two compile/test fixes on the way: `JsonArray` needs `asJsonArray`
   (a boolean `isJsonArray()` method does not smart-cast), and the
   app_name string had become "Prognos" (the rename sed ran before
-  the targeted app-name fix) plus one OTP test expectation that
+  the targeted `>Prognosis<` fix) plus one OTP test expectation that
   contradicted the trim behaviour.
 
 ## Static checks (shipped code, `app/src/main/`)
 
-- Zero old-name mentions. Zero em dashes. Zero chain or partner wording.
+- Zero "Prognosis". Zero em dashes. Zero Sepolia / broker wording.
   Zero "live trading". Zero private keys in the DEX (0 matches for a
   PEM private key header). No key or secret is used or stored in the
   app; the trading service is only ever reached through api.php.
@@ -120,7 +102,7 @@ assetlinks.json for chooser-free https return). Nothing is faked.
 
 ---
 
-# Prognos Labs Android app - Build report (v1)
+# Prognosis Android app - Build report (v1, debug)
 
 Built 17 Nov 2026, late morning WAT. Result: **BUILD SUCCESSFUL**.
 
@@ -164,7 +146,7 @@ v5 is a design correction on top of v4. Flint rated v4 4/10: the hero sparkline 
 - Copy: `~/workspace/prognos-labs/prognos-android-debug.apk` (same file, v8 copy overwritten)
 - SHA-256: `37c980f04c0c2a4adefa7e075b92e13d986c052446eb9f97f38c003f3980d53c`
 - Package: `xyz.fruitslice.prognos`, versionCode 9, versionName 1.0.0 (v1 release)
-- App name: Prognos Labs. Launcher activity: `xyz.fruitslice.prognos.MainActivity`
+- App name: Prognosis. Launcher activity: `xyz.fruitslice.prognos.MainActivity`
 - Min SDK 26, target SDK 34, compile SDK 34
 - Permissions: INTERNET, ACCESS_NETWORK_STATE (plus the system-added dynamic-receiver permission)
 - Icon: adaptive icon from the ribbon-P logo (v3), all densities present
@@ -216,7 +198,7 @@ redesigned; the v8 preview match is untouched.
    must match, inline success / error message, fields cleared
    after submit; Sign out button); Appearance (dark mode toggle,
    same as the moon); Notifications (price-alerts toggle, stored
-   on device, defaults to on); About (Prognos Labs, version 1.0.0
+   on device, defaults to on); About (Prognosis, version 1.0.0
    from BuildConfig, "Trading opens soon" note). The toggle is
    real: with alerts off, the Notifications screen says "Price
    alerts are off" and the bell dot on the Dashboard hides. Log
@@ -308,7 +290,7 @@ Withdraw disabled with lock everywhere), dark balance card in both
 themes, auth copy, 4-tab nav, markets 8 + Show more, asset dropdown,
 search, button tabs, forecast cards, order book data, watchlist (device
 only), notifications centre, no news on home, no docs, no emojis, no em
-dashes, no AI/partner/chain wording, no fake numbers or trades, trading
+dashes, no AI/Gate/Sepolia wording, no fake numbers or trades, trading
 always gated ("Trading opens soon").
 
 **Tests:** 39/39 pass (AuthValidation 7, FontAndBackground 8,
@@ -317,7 +299,7 @@ for v8: the header-band test is gone (band deleted), a new test asserts
 the motif drawables exist.
 
 **Static checks:** no attribution markers,
-zero em dashes, zero partner/chain wording (the only matches are
+zero em dashes, zero Gate/Sepolia/Broker wording (the only matches are
 `nav.navigate`, a substring), zero code-drawn logo, zero Deposit/
 Withdraw detail screens or routes, zero system-font fallbacks. The only
 non-ASCII character in shipped code is the "·" middot in the detail
@@ -346,7 +328,7 @@ no emulator is available here, so a Compose render was not possible.
 - v1 (v9 build iteration): `BUILD SUCCESSFUL in 1m 33s` on the final full build (`assembleDebug testDebugUnitTest` in one run). One compile fix on the way: `BuildConfig` did not resolve, because BuildConfig generation was not enabled; fixed by setting `buildConfig = true` in `buildFeatures` in `app/build.gradle.kts`. A second full run with `--rerun-tasks` saved the logs (`build-log-assembleDebug-v1.txt`: BUILD SUCCESSFUL in 2m 15s; `build-log-testDebugUnitTest-v1.txt`: BUILD SUCCESSFUL in 1m 43s, 45/45 pass). The SHA above is the APK from that logged run.
 - v8: `BUILD SUCCESSFUL in 1m 4s` on the final full build (after 5 compile fixes: Tab visibility, MoverCard weight scope, Adjust icon does not exist, StarOutline fully-qualified reference, one stray brace from the Markets rewrite), plus a comment-only fix and a wallet-motif placement fix, each followed by a rebuild and a full test run. The SHA above is the APK after the last fix.
 - v7: `BUILD SUCCESSFUL in 57s` on the first full build after one fix (see below). Full log: `build-log-assembleDebug-v7.txt` in this folder.
-- v6: `BUILD SUCCESSFUL in 2m 1s` on the first full build, no compile errors. Full log: `build-log-assembleDebug-v6.txt` in this folder. One rename after verification (see Static checks): the lock class was renamed to `TradingLock` so the name itself cannot trip the banned-word check, followed by a clean rebuild and a full test run (`build-log-assembleDebug-v6-final.txt`); the SHA above is the APK after that rename. No behaviour change in the rebuild, rename only.
+- v6: `BUILD SUCCESSFUL in 2m 1s` on the first full build, no compile errors. Full log: `build-log-assembleDebug-v6.txt` in this folder. One rename after verification (see Static checks): `TradingGate` became `TradingLock` so the name itself cannot trip the banned-word check, followed by a clean rebuild and a full test run (`build-log-assembleDebug-v6-final.txt`); the SHA above is the APK after that rename. No behaviour change in the rebuild, rename only.
 - v5: `BUILD SUCCESSFUL in 1m 34s` on the third build attempt. Full log: `build-log-assembleDebug-v5.txt` in this folder. Two compile fixes on the way, both mine: the Sparkline deletion in `Chart.kt` also ate the `PriceChart` declaration line, restored with its doc comment; and `Background.kt` was missing two imports (`StrokeCap`, `fillMaxWidth`). No other code changed to get the build green.
 - v4: `BUILD SUCCESSFUL in 2m 6s` on the first full build, no compile errors. Full log: `build-log-assembleDebug-v4.txt` in this folder. One small cleanup after verification: the unused `NewsItem` import in `AppViewModel.kt` was removed, followed by a clean rebuild and a full test run (`build-log-assembleDebug-v4-final.txt`); the SHA above is the APK after that cleanup. No code change in the rebuild, import only.
 - v3: `BUILD SUCCESSFUL in 1m 47s` on the first full v3 build after one fix, then `BUILD SUCCESSFUL in 32s` after the icon-colour fix below. Full log: `build-log-assembleDebug-v3.txt` in this folder.
@@ -370,11 +352,11 @@ Google Fonts (github.com/google/fonts). Archivo is a variable font
 upstream, so static instances per weight were generated with
 fontTools instancer and subset to Latin + punctuation (about 75 KB
 per Archivo weight, 18 KB per Plex Mono weight, about 448 KB total).
-`Theme.kt` defines the font family / the mono family and
-a the typography that sets Archivo as the default font family
+`Theme.kt` defines `PrognosisFontFamily` / `PrognosisMonoFamily` and
+a `PrognosisTypography` that sets Archivo as the default font family
 for every Material3 text style, so any Text that does not name a
 family still renders in Archivo. All 33 `FontFamily.Monospace`
-usages in `Design.kt` / `Screens.kt` now use the mono family.
+usages in `Design.kt` / `Screens.kt` now use `PrognosisMonoFamily`.
 No shipped code references the platform default or monospace families
 at all. Verified: `aapt list` shows all 9 TTFs plus both family XMLs
 inside the APK, and the unit tests assert the theme really uses the
@@ -427,7 +409,7 @@ with lock), dark balance card in both themes, auth copy "Prediction
 markets, built for your phone.", 4-tab bottom nav, markets 8 at a time
 with "Show more", asset dropdown, search, button tabs, forecast cards,
 order book, watchlist (device only), notifications centre. No news on
-home, no docs, no em dashes, no emojis, no AI/partner/chain wording in
+home, no docs, no em dashes, no emojis, no AI/Gate/Sepolia wording in
 shipped code.
 
 ## What changed in v6
@@ -439,7 +421,7 @@ The approved preview, built exactly. Nothing is invented beyond it.
 - The balance card is a dark card in both themes (black background, white text, hairline border in dark mode so it still reads as a card). In v5 it flipped to white in dark mode; the preview calls it a dark card.
 - Auth copy matches the preview: the supporting line is now "Prediction markets, built for your phone." and the primary button is lime in dark mode (black in light mode).
 - Positions empty states on the Dashboard and Portfolio now read "Trading opens soon." exactly as in the preview.
-- Kept from v5: real logo image on splash and auth, background design (lime glow, cropped ribbon motif, dot field, static Canvas), dark Dashboard header band, 4-tab bottom nav, markets 8 at a time with "Show more", asset dropdown, search, button tabs, forecast cards, order book, watchlist (device only), notifications centre. No news on home, no docs, no em dashes, no emojis, no AI/partner/chain wording in shipped code.
+- Kept from v5: real logo image on splash and auth, background design (lime glow, cropped ribbon motif, dot field, static Canvas), dark Dashboard header band, 4-tab bottom nav, markets 8 at a time with "Show more", asset dropdown, search, button tabs, forecast cards, order book, watchlist (device only), notifications centre. No news on home, no docs, no em dashes, no emojis, no AI/Gate/Sepolia wording in shipped code.
 
 ## What changed in v3
 
@@ -482,7 +464,7 @@ Removed in v3:
 Visual design first, on top of v3's structure. No restart, no new screens, no new tabs.
 
 Auth, fully designed (`AuthScreen`):
-- Ribbon-P logo mark (new `RibbonLogo` in `ui/Design.kt`: black rounded square, white P, lime dot) next to the "Prognos Labs" wordmark and a "PREDICTION MARKET" kicker.
+- Ribbon-P logo mark (new `RibbonLogo` in `ui/Design.kt`: black rounded square, white P, lime dot) next to the "Prognosis" wordmark and a "PREDICTION MARKET" kicker.
 - Bold headline "Trade the question." (34sp) with the short line "Yes or No. Live prices. One question at a time."
 - A "LIVE PRICES" strip from the real ticker, so the screen feels alive before you log in.
 - Button tabs (new `SegmentedTabs`: scrollable pill row, selected is solid black) to switch Log in / Sign up, large rounded fields (14dp radius, 56dp tall), a big black primary button (54dp tall, 16sp bold). Auth is still local on-device only, SHA-256 hash, same note about server sign-in arriving with trading.
@@ -521,7 +503,7 @@ Background design (new `ui/Background.kt`):
 - The Dashboard header sits in `DashboardHeaderBand`: a dark band with rounded bottom corners, the same ribbon motif cropped off the right edge at 8% alpha, a lime glow, and a short lime rule at the bottom left. Greeting and icons inside the band are white in both themes. The list below stays on a clean surface.
 - Cost: one static Canvas per screen, drawn once per composition and then still. No bitmap backgrounds, no blur, no animation, no per-frame work. The only bitmap in the app is the 16 KB logo itself. On an average phone the background costs a handful of draw calls at composition time and nothing after that.
 
-Kept from v4: designed login/signup form (now with the background design and the real logo), Dashboard with balance card, quick actions, positions, top movers, watchlist; Portfolio with balance card and P&L summary; Markets showing 8 at a time with "Show more", asset dropdown, search, button tabs (All, Gainers, Losers, Watchlist, Ending soon); 4-tab bottom nav; forecast cards, order book, watchlist (device only), notifications centre; trading/deposit/withdraw gated and disabled with "Trading opens soon". No news on home, no docs, no emojis, no em dashes, no AI/partner/chain wording in shipped code. No new element was added that does not make sense on its own screen.
+Kept from v4: designed login/signup form (now with the background design and the real logo), Dashboard with balance card, quick actions, positions, top movers, watchlist; Portfolio with balance card and P&L summary; Markets showing 8 at a time with "Show more", asset dropdown, search, button tabs (All, Gainers, Losers, Watchlist, Ending soon); 4-tab bottom nav; forecast cards, order book, watchlist (device only), notifications centre; trading/deposit/withdraw gated and disabled with "Trading opens soon". No news on home, no docs, no emojis, no em dashes, no AI/Gate/Sepolia wording in shipped code. No new element was added that does not make sense on its own screen.
 
 ## Tests
 
@@ -540,10 +522,10 @@ Kept from v4: designed login/signup form (now with the background design and the
 - No attribution markers in shipped code.
 - Zero em dashes. Zero emojis. The only non-ASCII character in shipped code is the "·" middot in the detail meta row, which matches the preview's own "Bitcoin · BTC".
 - Zero API keys, secrets, passwords, key references. The app uses no key at all; base URL is `https://prognoslabs.fruitslice.xyz/` (https only). Only a SHA-256 hash of the locally entered password is stored on the device, never the password itself.
-- No partner, chain or trading-service wording in shipped code (the only "gate" match is the word "navigate" inside code). The lock object was first named with a provider word in v6; that name itself tripped the check, so it was renamed to `TradingLock` and the word "gated" was removed from code comments. The lock is documented here and in the README only, not in the app.
+- No Gate, Sepolia or Broker wording in shipped code (the only "gate" match is the word "navigate" inside code). The lock object was first named `TradingGate` in v6; that name itself tripped the check, so it was renamed to `TradingLock` and the word "gated" was removed from code comments. The lock is documented here and in the README only, not in the app.
 - No ivory anywhere, including resources. No documentation strings, no Docs screen, no news surface in the UI.
 - No LIVE pill, no "LIVE PRICES" label, no hero sparkline, no hero-chart code anywhere in the app. The only "live" wording left is the honest sentence "There is no live price to work from" on the forecast card. No code-drawn logo anywhere: the logo is the real `prognos_logo.png` / `prognos_logo_dark.png` drawable, and the motif is the real `motif_light.png` / `motif_dark.png` image rendered from the logo v3 geometry, not a drawing in code.
-- No system font fallback anywhere: zero `FontFamily.Default`, `FontFamily.Monospace`, `FontFamily.SansSerif`, `FontFamily.Serif` or `FontFamily.Cursive` in shipped code. Every text element uses the font family or the mono family, or inherits them from the typography.
+- No system font fallback anywhere: zero `FontFamily.Default`, `FontFamily.Monospace`, `FontFamily.SansSerif`, `FontFamily.Serif` or `FontFamily.Cursive` in shipped code. Every text element uses `PrognosisFontFamily` or `PrognosisMonoFamily`, or inherits them from `PrognosisTypography`.
 - DEX verified to contain the app classes; APK contains the launcher icons in all densities, both real logo drawables `prognos_logo.png` / `prognos_logo_dark.png`, both motif drawables `motif_light.png` / `motif_dark.png`, and all 9 bundled font files plus both font-family XMLs (`res/font/archivo.xml`, `res/font/plex_mono.xml`, `archivo_regular/medium/semibold/bold/extrabold.ttf`, `plexmono_regular/medium/semibold/bold.ttf`). Deposit/Withdraw are disabled everywhere: `BalanceCard` buttons are `enabled = false` with lock icons, the Dashboard quick actions pass `enabled = false`, the Portfolio Holdings button reads `TradingLock.depositsOpen` (false), the Wallet Deposit/Withdraw pills do nothing, and no Deposit/Withdraw detail screen or route remains.
 
 ## What was verified live vs not

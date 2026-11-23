@@ -1,6 +1,8 @@
 package xyz.fruitslice.prognos.data
 
 import com.google.gson.Gson
+import xyz.fruitslice.prognos.model.BookResponse
+import xyz.fruitslice.prognos.model.ChartResponse
 import xyz.fruitslice.prognos.model.Market
 import xyz.fruitslice.prognos.model.MarketsResponse
 import xyz.fruitslice.prognos.model.TickerAsset
@@ -45,6 +47,10 @@ fun tickerResponseFromJson(json: String?): TickerResponse? {
  * injectable so unit tests can move time without sleeping. A value is
  * "fresh" inside its TTL; an older value is still returned as "stale"
  * so the screen can show the last real data while a refresh runs.
+ *
+ * v1.1.8: the methods are synchronized. The disk and parse work moved
+ * off the main thread, so the 30s refresh and the 10s ticker tick can
+ * now touch this cache from different threads at once.
  */
 class MemoryMarketCache(private val now: () -> Long = { System.currentTimeMillis() }) {
     private var markets: List<Market>? = null
@@ -52,31 +58,80 @@ class MemoryMarketCache(private val now: () -> Long = { System.currentTimeMillis
     private var ticker: List<TickerAsset>? = null
     private var tickerAtMs: Long = 0L
 
+    @Synchronized
     fun putMarkets(items: List<Market>) {
         markets = items
         marketsAtMs = now()
     }
 
+    @Synchronized
     fun putTicker(items: List<TickerAsset>) {
         ticker = items
         tickerAtMs = now()
     }
 
     /** Fresh markets, or null when none have been cached or they expired. */
+    @Synchronized
     fun freshMarkets(): List<Market>? {
         val m = markets ?: return null
         return if (now() - marketsAtMs < MARKETS_CACHE_TTL_MS) m else null
     }
 
     /** Fresh ticker, or null when none has been cached or it expired. */
+    @Synchronized
     fun freshTicker(): List<TickerAsset>? {
         val t = ticker ?: return null
         return if (now() - tickerAtMs < TICKER_CACHE_TTL_MS) t else null
     }
 
     /** Last markets, fresh or stale. Null only when nothing was ever cached. */
+    @Synchronized
     fun staleMarkets(): List<Market>? = markets
 
     /** Last ticker, fresh or stale. Null only when nothing was ever cached. */
+    @Synchronized
     fun staleTicker(): List<TickerAsset>? = ticker
+}
+
+/** Books are live data: 10 seconds old is still the last real book. */
+const val DETAIL_BOOK_CACHE_TTL_MS = 10_000L
+/** Charts move slowly: 30 seconds old is still the last real chart. */
+const val DETAIL_CHART_CACHE_TTL_MS = 30_000L
+
+/**
+ * v1.1.8: in-memory cache for one market's books and chart, so
+ * reopening a market shows the last real data at once instead of a
+ * spinner. Only the first paint of the detail screen reads it; the
+ * 5-second live polling always fetches fresh, so ticking stays live.
+ * `now` is injectable so unit tests can move time without sleeping.
+ */
+class DetailCache(private val now: () -> Long = { System.currentTimeMillis() }) {
+    private data class BookEntry(val book: BookResponse, val atMs: Long)
+    private data class ChartEntry(val chart: ChartResponse, val atMs: Long)
+    private val books = mutableMapOf<String, BookEntry>()
+    private val charts = mutableMapOf<String, ChartEntry>()
+
+    @Synchronized
+    fun putBook(tokenId: String, book: BookResponse) {
+        books[tokenId] = BookEntry(book, now())
+    }
+
+    /** Fresh book for a token, or null when none was cached or it expired. */
+    @Synchronized
+    fun book(tokenId: String): BookResponse? {
+        val e = books[tokenId] ?: return null
+        return if (now() - e.atMs < DETAIL_BOOK_CACHE_TTL_MS) e.book else null
+    }
+
+    @Synchronized
+    fun putChart(marketId: String, chart: ChartResponse) {
+        charts[marketId] = ChartEntry(chart, now())
+    }
+
+    /** Fresh chart for a market, or null when none was cached or it expired. */
+    @Synchronized
+    fun chart(marketId: String): ChartResponse? {
+        val e = charts[marketId] ?: return null
+        return if (now() - e.atMs < DETAIL_CHART_CACHE_TTL_MS) e.chart else null
+    }
 }

@@ -673,11 +673,19 @@ fun AuthField(
  *  which outcome to pick. When the market has no price there is honestly
  *  no forecast. The context carries the live ticker, news, books and
  *  chart the forecast reads; without it the note falls back to what the
- *  market alone can say. */
+ *  market alone can say.
+ *
+ *  v1.1.8: callers pass minute-floored seconds (nowMinute * 60). The
+ *  forecast text only changes once a minute, so the card recomputes
+ *  at most once a minute instead of every second. */
 @Composable
 fun ForecastCard(market: Market, nowSec: Long, ctx: ForecastContext? = null) {
     val c = appColors()
-    val f = forecastFor(market, nowSec, ctx)
+    // v1.1.9: the forecast is remembered on its inputs, so the string
+    // build runs once per minute per market instead of on every
+    // recomposition of the detail screen (books and chart poll every
+    // 5s and used to rebuild it each time).
+    val f = remember(market.id, nowSec, ctx) { forecastFor(market, nowSec, ctx) }
     val verdict = f?.verdict
     Box(
         modifier = Modifier
@@ -704,7 +712,7 @@ fun ForecastCard(market: Market, nowSec: Long, ctx: ForecastContext? = null) {
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                f?.reason ?: "No forecast for this market yet. The market has no price, so there is nothing to read.",
+                f?.reason ?: "No forecast for this market yet. There is no price to read.",
                 fontSize = 14.sp,
                 color = c.grey
             )
@@ -831,7 +839,7 @@ fun WatchlistRow(
             )
         }
         Column(horizontalAlignment = Alignment.End) {
-            Text(fmtPct(market.p0), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = c.ink)
+            MarketPriceLabel(market.p0, extraBold = false)
             Spacer(modifier = Modifier.height(2.dp))
             ChangePill(chg24)
         }
@@ -851,7 +859,7 @@ fun WatchlistRow(
  * Balance card. One clean dark card in both themes: total balance, a
  * short honest note, and Deposit / Withdraw buttons inside it. The
  * buttons are DISABLED, greyed with lock icons, because deposits and
- * withdrawals stay closed until trading opens (see TradingLock). They
+ * withdrawals are locked until trading opens (see TradingLock). They
  * never navigate anywhere. Balance is always honest.
  *
  * v7: radius 20dp and value 33sp, exactly as the approved preview.
@@ -953,6 +961,29 @@ fun BalanceCard(
 }
 
 /**
+ * The Yes price for a market row, or "No price yet" when the
+ * market genuinely has no price (a future window with no orders
+ * yet, so there is no bid, ask or last trade to read). v1.1.15: a
+ * bare dash read as a broken row on the ETH 5-minute markets,
+ * which have no price yet. The price is never invented: when
+ * there is none, the row says so.
+ */
+@Composable
+fun MarketPriceLabel(p0: Double?, extraBold: Boolean) {
+    val c = appColors()
+    if (p0 == null) {
+        Text("No price yet", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = c.grey)
+    } else {
+        Text(
+            fmtPct(p0),
+            fontSize = 14.sp,
+            fontWeight = if (extraBold) FontWeight.ExtraBold else FontWeight.Bold,
+            color = c.ink
+        )
+    }
+}
+
+/**
  * Compact market row, exactly as the preview draws it: 64dp tall, a
  * letter circle on the left with the asset code BELOW it (9.5sp/800
  * grey), the question in up to two lines (13.5sp/600) in the middle,
@@ -963,7 +994,6 @@ fun BalanceCard(
 @Composable
 fun MarketRow(
     market: Market,
-    nowSec: Long,
     starred: Boolean,
     onStar: () -> Unit,
     onClick: () -> Unit,
@@ -1001,12 +1031,7 @@ fun MarketRow(
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column(horizontalAlignment = Alignment.End) {
-            Text(
-                fmtPct(market.p0),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = c.ink
-            )
+            MarketPriceLabel(market.p0, extraBold = true)
             Spacer(modifier = Modifier.height(2.dp))
             ChangePill(chg24)
         }

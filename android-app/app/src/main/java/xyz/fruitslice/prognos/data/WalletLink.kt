@@ -40,6 +40,14 @@ fun isValidWalletAddress(v: String): Boolean {
     return false
 }
 
+/**
+ * v1.1.10: coarse wallet type for the wallet_linked analytics
+ * event. "evm" for a 0x address, "solana" otherwise. Never the
+ * address itself.
+ */
+fun walletAddressType(address: String): String =
+    if (address.trim().startsWith("0x", ignoreCase = true)) "evm" else "solana"
+
 /** The browser URL that starts the link, carrying the fresh nonce. */
 fun linkPageUrl(nonce: String?): String {
     val base = AppConfig.LINK_PAGE_URL
@@ -74,11 +82,24 @@ fun parseLinkedReturn(url: String?): LinkedReturn {
 }
 
 /** True when a URL is the link-page return the app should catch. */
+/**
+ * Whether this URL is the wallet-link return page. The path must be
+ * exactly /linked: a plain startsWith also matched /linkedXYZ, which
+ * is not the return page. The server-side session check is the real
+ * gate; this only decides which page the app treats as a return.
+ */
 fun isLinkedReturnUrl(url: String?): Boolean {
     if (url.isNullOrBlank()) return false
     val lower = url.lowercase()
-    return lower.startsWith("prognoslabs://linked") ||
-        lower.startsWith("https://prognoslabs.xyz/linked")
+    if (lower.startsWith("prognoslabs://linked")) {
+        val rest = lower.removePrefix("prognoslabs://linked")
+        return rest.isEmpty() || rest.startsWith("?") || rest.startsWith("#") || rest.startsWith("/")
+    }
+    if (lower.startsWith("https://prognoslabs.xyz/linked")) {
+        val rest = lower.removePrefix("https://prognoslabs.xyz/linked")
+        return rest.isEmpty() || rest.startsWith("?") || rest.startsWith("#") || rest == "/" || rest.startsWith("/?")
+    }
+    return false
 }
 
 /** A trading session token is 64 lowercase-or-uppercase hex chars. */

@@ -38,21 +38,19 @@ import xyz.fruitslice.prognos.data.tradingStateFor
 import java.io.File
 import java.net.ServerSocket
 
-private val OLD_NAME = "prog" + "nosis"
-
 /**
  * v1.1.0: rename, server auth contract, OTP, trading lock states and
  * the Buy Up / Sell Down colour rule. Pure JVM tests, no Android.
  */
 class AuthTradingTest {
 
-    // ---- 1. Rename: zero old-name mentions in app/src/main, any case ----
+    // ---- 1. Rename: zero "Prognosis" in app/src/main, any case ----
     // Case-insensitive on purpose: a lowercase internal name (the
-    // DataStore once used the old name) must not slip past a scan that
+    // DataStore was once "prognosis") must not slip past a scan that
     // only looks for the capitalised word.
 
     @Test
-    fun noOldNameAnywhereInShippedCode() {
+    fun noPrognosisAnywhereInShippedCode() {
         val cwd = System.getProperty("user.dir") ?: "."
         val roots = listOf(
             File("src/main"),
@@ -67,10 +65,10 @@ class AuthTradingTest {
             .filter { it.isFile && (it.name.endsWith(".kt") || it.name.endsWith(".xml")) }
             .forEach { f ->
                 f.readLines().forEachIndexed { i, line ->
-                    if (line.contains(OLD_NAME, ignoreCase = true)) hits.add("${f.relativeTo(root)}:${i + 1}")
+                    if (line.contains("prognosis", ignoreCase = true)) hits.add("${f.relativeTo(root)}:${i + 1}")
                 }
             }
-        assertTrue("Found the old name in shipped code: $hits", hits.isEmpty())
+        assertTrue("Found Prognosis in shipped code: $hits", hits.isEmpty())
     }
 
     @Test
@@ -82,7 +80,7 @@ class AuthTradingTest {
         assertTrue(strings.isFile)
         val text = strings.readText()
         assertTrue(text.contains(">Prognos Labs<"))
-        assertFalse(text.contains(OLD_NAME, ignoreCase = true))
+        assertFalse(text.contains("prognosis", ignoreCase = true))
     }
 
     // ---- 2. OTP validation ----
@@ -187,9 +185,9 @@ class AuthTradingTest {
 
     @Test
     fun linkedWithoutSessionIsLockedButKnown() {
-        val s = tradingStateFor(true, true, "0x1234567890abcdef1234567890abcdef12345678", false)
+        val s = tradingStateFor(true, true, "0x216e95babd339a07ab020f448aea3911151677d9", false)
         assertTrue(s is TradingState.Linked)
-        assertEquals("0x1234567890abcdef1234567890abcdef12345678", (s as TradingState.Linked).address)
+        assertEquals("0x216e95babd339a07ab020f448aea3911151677d9", (s as TradingState.Linked).address)
     }
 
     @Test
@@ -257,7 +255,7 @@ class AuthTradingTest {
 
     @Test
     fun walletAddressValidation() {
-        assertTrue(isValidWalletAddress("0x1234567890abcdef1234567890abcdef12345678"))
+        assertTrue(isValidWalletAddress("0x216e95bABd339a07aB020f448AeA3911151677D9"))
         assertTrue(isValidWalletAddress("41nX57qXtLuJ7YWfJRmXBYdjrJPFiH4xNrSeNuTtLfef"))
         assertFalse(isValidWalletAddress(""))
         assertFalse(isValidWalletAddress("0x123"))
@@ -318,7 +316,7 @@ class AuthTradingTest {
     @Test
     fun linkedReturnAcceptedOnlyForTheWalletThisAppAskedToLink() {
         val session = "a".repeat(64)
-        val wallet = "0x1234567890abcdef1234567890abcdef12345678"
+        val wallet = "0x216e95bABd339a07aB020f448AeA3911151677D9"
         val other = "0x0000000000000000000000000000000000000001"
         // The wallet the app asked to link: accepted.
         assertTrue(isAcceptableLinkedReturn(session, wallet, wallet, null))
@@ -427,7 +425,7 @@ class AuthTradingTest {
         StubServer().use { stub ->
             val trading = TradingRepository(createTradingApi(stub.base + "api.php"))
             assertEquals("nonce-abc", trading.requestLinkNonce())
-            assertEquals(false, trading.isWalletLinked("0x1234567890abcdef1234567890abcdef12345678"))
+            assertEquals(false, trading.isWalletLinked("0x216e95bABd339a07aB020f448AeA3911151677D9"))
             // Balance 401 on the stub: no balance, no crash.
             assertNull(trading.loadBalance("0xabc", "bad-session"))
             // A linked wallet with no session is locked, not ready.
@@ -508,7 +506,7 @@ private class StubServer : AutoCloseable {
             path.startsWith("/api.php") && action == "link_nonce" ->
                 200 to """{"nonce":"nonce-abc"}"""
             path.startsWith("/api.php") && action == "link_status" ->
-                200 to """{"linked":false,"address":"0x1234567890abcdef1234567890abcdef12345678"}"""
+                200 to """{"linked":false,"address":"0x216e95babd339a07ab020f448aea3911151677d9"}"""
             path.startsWith("/api.php") && action == "session_status" ->
                 200 to """{"ok":true,"address":"0xabc"}"""
             path.startsWith("/api.php") && action == "balance" ->

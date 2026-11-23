@@ -19,17 +19,29 @@ import androidx.compose.ui.unit.dp
  * preview draws it) and the end dot is lime with a dark ring, not plain
  * ink. Height 150dp, as the preview's chart area.
  */
+
+/**
+ * Only the chart points a chart can safely draw: each point is a
+ * [time, price] pair with finite values. One malformed point from the
+ * server used to crash the whole market detail screen, because the
+ * chart read point[1] with no check. Points that fail the check are
+ * dropped, never drawn, never crashed on.
+ */
+fun validChartPoints(points: List<List<Double>>): List<List<Double>> =
+    points.filter { it.size >= 2 && it[0].isFinite() && it[1].isFinite() }
+
 @Composable
 fun PriceChart(
     points: List<List<Double>>,
     line: Double?,
     modifier: Modifier = Modifier
 ) {
+    val valid = validChartPoints(points)
     val ink = appColors().ink
     val greyFill = appColors().grey2
     Canvas(modifier = modifier.fillMaxWidth().height(150.dp)) {
-        if (points.size < 2) return@Canvas
-        val values = points.map { it[1] }
+        if (valid.size < 2) return@Canvas
+        val values = valid.map { it[1] }
         var minV = values.minOrNull() ?: return@Canvas
         var maxV = values.maxOrNull() ?: return@Canvas
         if (line != null) {
@@ -44,7 +56,7 @@ fun PriceChart(
         maxV += pad
         val w = size.width
         val h = size.height
-        fun x(i: Int): Float = if (points.size <= 1) 0f else w * i / (points.size - 1).toFloat()
+        fun x(i: Int): Float = if (valid.size <= 1) 0f else w * i / (valid.size - 1).toFloat()
         fun y(v: Double): Float = (h - ((v - minV) / (maxV - minV) * h).toFloat())
 
         // Soft fill under the price line: lime above the win line, as the
