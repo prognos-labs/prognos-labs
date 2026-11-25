@@ -235,11 +235,19 @@ class WhisperRecognizer(
                 onEvent?.invoke(VoiceEngine.Event.Level(normLevel))
             }
 
+            // Calibrate the room noise floor, but only from quiet frames.
+            // If the user starts speaking the moment the sheet opens,
+            // those loud frames are speech, not room noise: averaging
+            // them into the floor would raise the speech threshold
+            // above their own voice, so the gate would reject
+            // everything they say and the listen would hear nothing.
             if (elapsedMs < CALIBRATION_MS && !speechHeard) {
-                noiseFloorSum += rms
-                noiseFloorFrames++
-                noiseFloorRms = (noiseFloorSum / noiseFloorFrames).coerceIn(150.0, 1200.0)
-                continue
+                if (rms < SILENCE_RMS) {
+                    noiseFloorSum += rms
+                    noiseFloorFrames++
+                    noiseFloorRms = (noiseFloorSum / noiseFloorFrames).coerceIn(150.0, 1200.0)
+                    continue
+                }
             }
 
             if (!isSilentAdaptive(rms, noiseFloorRms)) {
