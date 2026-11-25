@@ -1500,7 +1500,7 @@ Row(
         Text("Voice language", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = c.ink)
         Spacer(modifier = Modifier.height(2.dp))
         Text(
-            voiceLanguage.displayName + if (voiceLanguage.requiresCloudAsr) " (Cloud ASR)" else " (On-device)",
+            voiceLanguage.displayName + if (voiceLanguage.code == "ig") " (On-device)" else " (Cloud ASR)",
             fontSize = 13.sp,
             color = c.grey
         )

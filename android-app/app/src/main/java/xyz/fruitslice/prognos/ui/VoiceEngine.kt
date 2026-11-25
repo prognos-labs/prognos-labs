@@ -139,8 +139,13 @@ class VoiceEngine(
         this.onEvent = onEvent
         val lang = voiceLanguage()
 
-        // Route tonal / non-Whisper-ready languages to cloud ASR when configured.
-        if (lang.code != "ig" && lang.requiresCloudAsr && cloudAsr != null) {
+        // Groq first for every language it supports (Flint, 25 Nov):
+        // the on-device tiny model keeps mishearing him, while Groq
+        // heard him perfectly in the live test. Igbo is never sent:
+        // Whisper has no Igbo. Any cloud miss falls back to on-device
+        // inside startCloudListening, so the phone model is the
+        // fallback now, not the first try.
+        if (lang.code != "ig" && cloudAsr != null) {
             startCloudListening(lang.code, onEvent)
             return
         }

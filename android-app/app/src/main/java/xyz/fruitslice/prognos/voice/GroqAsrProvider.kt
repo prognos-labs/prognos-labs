@@ -17,11 +17,13 @@ import xyz.fruitslice.prognos.ui.AsrProvider
  * from config.php on the server. No audio is stored by the app, no device
  * identifier is sent, only the language code and the audio.
  *
- * Routing, automatic, no user toggle: VoiceEngine sends a language to this
- * provider only when that language is marked requiresCloudAsr in
- * VoiceLanguage (Yoruba, Hausa, Hebrew in v1.1.17). Everything else stays
- * on-device. Igbo is never sent here: Whisper has no Igbo, so transcribe
- * returns null for "ig" and the caller falls back to on-device English.
+ * Routing, automatic, no user toggle: VoiceEngine sends every language
+ * to this provider first (v1.1.18, Flint's order), because the on-device
+ * tiny model keeps mishearing him and Groq heard him perfectly in the
+ * live test. Everything else stays on-device only as the fallback when
+ * the cloud misses. Igbo is never sent here: Whisper has no Igbo, so
+ * transcribe returns null for "ig" and the caller falls back to
+ * on-device English.
  *
  * Any failure returns null. The caller must fall back to on-device Whisper
  * on null, never show a cloud error to the user, and never retry in a loop.
