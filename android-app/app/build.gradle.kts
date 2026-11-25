@@ -15,7 +15,7 @@ android {
         applicationId = "xyz.prognoslabs.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 32
+        versionCode = 33
         // v1.1.16: Whisper only, model bundled, new call screen.
         // The phone's built-in recognizer is gone: every listen
         // goes through the speech library, whose model ships
@@ -31,7 +31,7 @@ android {
         // spoken words shown as text, no stray "Thank you.", ETH
         // rows saying "No price yet". Firebase Analytics from
         // v1.1.10 is intact.
-        versionName = "1.1.22"
+        versionName = "1.1.23"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // The speech library's native code: 64-bit and 32-bit ARM.

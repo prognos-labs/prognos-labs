@@ -21,9 +21,9 @@ import xyz.prognoslabs.app.data.parseVoiceUtterance
 class V1115Test {
 
     @Test
-    fun versionIs1122() {
-        assertEquals(32, BuildConfig.VERSION_CODE)
-        assertEquals("1.1.22", BuildConfig.VERSION_NAME)
+    fun versionIs1123() {
+        assertEquals(33, BuildConfig.VERSION_CODE)
+        assertEquals("1.1.23", BuildConfig.VERSION_NAME)
     }
 
     // ---- Fix 1: the mic is a header button, never floating ----

@@ -54,6 +54,12 @@ fun ttsLocale(language: VoiceLanguage): Locale =
     if (language == VoiceLanguage.HEBREW) Locale("iw") else Locale(language.code)
 
 fun interface AsrProvider {
+    /**
+     * Transcribes captured audio. [languageCode] is a hint for the
+     * recognizer: blank means detect the spoken language, a code
+     * pins it. Igbo is never transcribed: the provider returns null
+     * and the caller falls back to on-device English.
+     */
     suspend fun transcribe(pcm: ShortArray, sampleRate: Int, languageCode: String): AsrTranscript?
 }
 
@@ -173,8 +179,14 @@ class VoiceEngine(
         // Whisper has no Igbo. Any cloud miss falls back to on-device
         // inside startCloudListening, so the phone model is the
         // fallback now, not the first try.
+        // v1.1.23: only Yoruba, Hausa and Hebrew get a language hint,
+        // because Groq cannot detect them on its own. Every other
+        // language goes with no hint, so Groq detects what was
+        // actually spoken and the app hears any language, not just
+        // the one set in Settings.
+        val cloudLang = if (lang.requiresCloudAsr) lang.code else ""
         if (lang.code != "ig" && cloudAsr != null) {
-            startCloudListening(lang.code, onEvent)
+            startCloudListening(cloudLang, onEvent)
             return
         }
 

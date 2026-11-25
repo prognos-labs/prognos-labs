@@ -86,9 +86,9 @@ class V1116Test {
             File(mainRoot(), "cpp").walkTopDown().filter { it.isFile }.toList()
 
     @Test
-    fun versionIs1122() {
-        assertEquals(32, BuildConfig.VERSION_CODE)
-        assertEquals("1.1.22", BuildConfig.VERSION_NAME)
+    fun versionIs1123() {
+        assertEquals(33, BuildConfig.VERSION_CODE)
+        assertEquals("1.1.23", BuildConfig.VERSION_NAME)
     }
 
     // ---- 1. Whisper only: the built-in recognizer is gone ----

@@ -30,6 +30,16 @@ import xyz.prognoslabs.app.ui.AsrTranscript
  * transcribe returns null for "ig" and the caller falls back to
  * on-device English.
  *
+ * v1.1.23: the language is a hint, not a lock. Only Yoruba, Hausa and
+ * Hebrew get one, because Groq cannot detect them on its own (real
+ * FLEURS speech, 26 Nov: auto-detect heard nothing in Hausa and
+ * hallucinated English in Yoruba, while the hint brought both back).
+ * Every other language is sent with no hint, so Groq detects what was
+ * actually spoken and the app hears any language, not just the one set
+ * in Settings. The proxy needs asr.php v3 for that: the old proxy
+ * rejects a missing language, and then transcribe returns null and the
+ * caller falls back to on-device, so nothing breaks before v3 is live.
+ *
  * Any failure returns null. The caller must fall back to on-device Whisper
  * on null, never show a cloud error to the user, and never retry in a loop.
  * The free tier is 20 requests a minute and 2,000 a day, per organisation.
@@ -48,6 +58,17 @@ class GroqAsrProvider(
         private val SUPPORTED = setOf(
             "en", "es", "fr", "pt", "de", "tr", "ar", "yo", "ha", "he", "zh"
         )
+
+        /**
+         * The language header for one call. Blank means auto-detect:
+         * no header is sent and Groq reports what it heard. A code
+         * Groq cannot transcribe (Igbo) also means no call at all.
+         * Pure, so unit tests can pin it without a network.
+         */
+        fun groqLanguageHeader(languageCode: String): String? {
+            if (languageCode.isBlank()) return null
+            return if (languageCode in SUPPORTED) languageCode else null
+        }
 
         /**
          * Parses the JSON response from https://prognoslabs.xyz/asr.php.
@@ -73,7 +94,9 @@ class GroqAsrProvider(
         sampleRate: Int,
         languageCode: String
     ): AsrTranscript? {
-        if (languageCode !in SUPPORTED) return null
+        // A language Groq cannot transcribe (Igbo) is refused here,
+        // before any network: a blank code means auto-detect.
+        if (languageCode.isNotBlank() && languageCode !in SUPPORTED) return null
         if (pcm.isEmpty() || sampleRate <= 0) return null
         return try {
             val wav = pcmToWav(pcm, sampleRate)
@@ -83,7 +106,7 @@ class GroqAsrProvider(
                 readTimeout = READ_TIMEOUT_MS
                 doOutput = true
                 setRequestProperty("Content-Type", "audio/wav")
-                setRequestProperty("X-Prognos-Language", languageCode)
+                groqLanguageHeader(languageCode)?.let { setRequestProperty("X-Prognos-Language", it) }
             }
             connection.outputStream.use { it.write(wav) }
             if (connection.responseCode != HttpURLConnection.HTTP_OK) return null

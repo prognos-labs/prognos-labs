@@ -63,10 +63,10 @@ class V110Test {
     // ---- Shipping shape ----
 
     @Test
-    fun versionIs1122() {
+    fun versionIs1123() {
         val text = findAppFile("build.gradle.kts").readText()
-        assertTrue("versionCode must be 32", text.contains("versionCode = 32"))
-        assertTrue("versionName must be 1.1.22", text.contains("versionName = \"1.1.22\""))
+        assertTrue("versionCode must be 33", text.contains("versionCode = 33"))
+        assertTrue("versionName must be 1.1.23", text.contains("versionName = \"1.1.23\""))
     }
 
     @Test
