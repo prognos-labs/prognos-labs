@@ -271,7 +271,7 @@ val ENGLISH_VOCAB = LanguageVocab(
         Regex("\\bprovenos\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bprovenal\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bnefrognos\\b", RegexOption.IGNORE_CASE) to "prognos",
-        Regex("\\bprobe\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprobe\\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\be\\s+therium\\b", RegexOption.IGNORE_CASE) to "ethereum",
         Regex("\\bprogno" + "sis\\b", RegexOption.IGNORE_CASE) to "prognos",
@@ -423,7 +423,7 @@ val SPANISH_VOCAB = LanguageVocab(
         Regex("\\bprovenos\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bprovenal\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bnefrognos\\b", RegexOption.IGNORE_CASE) to "prognos",
-        Regex("\\bprobe\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprobe\\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bprognose\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\bprogno" + "sis\\b", RegexOption.IGNORE_CASE) to "prognos"
@@ -556,7 +556,7 @@ val FRENCH_VOCAB = LanguageVocab(
         Regex("\\bprovenos\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bprovenal\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bnefrognos\\b", RegexOption.IGNORE_CASE) to "prognos",
-        Regex("\\bprobe\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprobe\\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bprognose\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\bprogno" + "sis\\b", RegexOption.IGNORE_CASE) to "prognos"
@@ -692,7 +692,7 @@ val PORTUGUESE_VOCAB = LanguageVocab(
         Regex("\\bprovenos\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bprovenal\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bnefrognos\\b", RegexOption.IGNORE_CASE) to "prognos",
-        Regex("\\bprobe\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprobe\\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bprognose\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\bprogno" + "sis\\b", RegexOption.IGNORE_CASE) to "prognos"
@@ -830,7 +830,7 @@ val GERMAN_VOCAB = LanguageVocab(
         Regex("\\bprovenos\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bprovenal\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bnefrognos\\b", RegexOption.IGNORE_CASE) to "prognos",
-        Regex("\\bprobe\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprobe\\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\bprogno" + "sis\\b", RegexOption.IGNORE_CASE) to "prognos"
     )
@@ -969,7 +969,7 @@ val TURKISH_VOCAB = LanguageVocab(
         Regex("\\bprovenos\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bprovenal\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bnefrognos\\b", RegexOption.IGNORE_CASE) to "prognos",
-        Regex("\\bprobe\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprobe\\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bprognose\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\bprogno" + "sis\\b", RegexOption.IGNORE_CASE) to "prognos"
@@ -1102,7 +1102,7 @@ val ARABIC_VOCAB = LanguageVocab(
         Regex("\\bprovenos\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bprovenal\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bnefrognos\\b", RegexOption.IGNORE_CASE) to "prognos",
-        Regex("\\bprobe\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprobe\\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bprognose\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\bprogno" + "sis\\b", RegexOption.IGNORE_CASE) to "prognos"
@@ -1184,7 +1184,7 @@ val IGBO_VOCAB = LanguageVocab(
         Regex("\\bprovenos\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bprovenal\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bnefrognos\\b", RegexOption.IGNORE_CASE) to "prognos",
-        Regex("\\bprobe\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprobe\\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bprognose\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\bbeach\\s+coins?\\b", RegexOption.IGNORE_CASE) to "bitcoin",
@@ -1268,7 +1268,7 @@ val YORUBA_VOCAB = LanguageVocab(
         Regex("\\bprovenos\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bprovenal\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bnefrognos\\b", RegexOption.IGNORE_CASE) to "prognos",
-        Regex("\\bprobe\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprobe\\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bprognose\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\bbeach\\s+coins?\\b", RegexOption.IGNORE_CASE) to "bitcoin",
@@ -1352,7 +1352,7 @@ val HAUSA_VOCAB = LanguageVocab(
         Regex("\\bprovenos\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bprovenal\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bnefrognos\\b", RegexOption.IGNORE_CASE) to "prognos",
-        Regex("\\bprobe\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprobe\\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bprognose\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\bbeach\\s+coins?\\b", RegexOption.IGNORE_CASE) to "bitcoin",
@@ -1437,7 +1437,7 @@ val HEBREW_VOCAB = LanguageVocab(
         Regex("\\bprovenos\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bprovenal\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bnefrognos\\b", RegexOption.IGNORE_CASE) to "prognos",
-        Regex("\\bprobe\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprobe\\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bprognose\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\bprogno" + "sis\\b", RegexOption.IGNORE_CASE) to "prognos"
@@ -1518,7 +1518,7 @@ val CHINESE_VOCAB = LanguageVocab(
         Regex("\\bprovenos\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bprovenal\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bnefrognos\\b", RegexOption.IGNORE_CASE) to "prognos",
-        Regex("\\bprobe\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprobe\\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bprognose\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\bprogno" + "sis\\b", RegexOption.IGNORE_CASE) to "prognos"
