@@ -13,7 +13,7 @@ android {
         applicationId = "xyz.fruitslice.prognos"
         minSdk = 26
         targetSdk = 34
-        versionCode = 27
+        versionCode = 28
         // v1.1.16: Whisper only, model bundled, new call screen.
         // The phone's built-in recognizer is gone: every listen
         // goes through the speech library, whose model ships
@@ -29,7 +29,7 @@ android {
         // spoken words shown as text, no stray "Thank you.", ETH
         // rows saying "No price yet". Firebase Analytics from
         // v1.1.10 is intact.
-        versionName = "1.1.17"
+        versionName = "1.1.18"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // The speech library's native code: 64-bit and 32-bit ARM.
@@ -53,8 +53,31 @@ android {
         }
     }
 
+    // v1.1.18: one stable signing key for every cloud build, restored
+    // from repo secrets by the workflow. Without the properties file
+    // (a local checkout) debug keeps Gradle's default debug key and
+    // nothing breaks. This is what makes each new APK install over
+    // the last one on the phone instead of failing with a signature
+    // mismatch, which is what happened between v1.1.17 and fix1.
+    signingConfigs {
+        if (rootProject.file("signing.properties").exists()) {
+            create("prognos") {
+                val props = java.util.Properties()
+                rootProject.file("signing.properties").inputStream().use { props.load(it) }
+                storeFile = file(props.getProperty("storeFile"))
+                storePassword = props.getProperty("storePassword")
+                keyAlias = props.getProperty("keyAlias")
+                keyPassword = props.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfigs.findByName("prognos")?.let { signingConfig = it }
+        }
         release {
+            signingConfigs.findByName("prognos")?.let { signingConfig = it }
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

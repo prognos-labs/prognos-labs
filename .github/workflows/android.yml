@@ -2,7 +2,7 @@ name: Android debug build
 
 on:
   push:
-    branches: [v1.1.17]
+    branches: [v1.1.18]
   workflow_dispatch:
 
 jobs:
@@ -39,6 +39,28 @@ jobs:
           fi
           printf '%s' "$GOOGLE_SERVICES_JSON" > android-app/app/google-services.json
 
+      # One stable signing key for every build, restored from repo
+      # secrets. Without this, each runner generates its own debug
+      # key, and the new APK cannot install over the old one.
+      - name: Restore signing keystore
+        env:
+          SIGNING_KEYSTORE_B64: ${{ secrets.SIGNING_KEYSTORE_B64 }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: |
+          if [ -z "$SIGNING_KEYSTORE_B64" ]; then
+            echo "SIGNING_KEYSTORE_B64 secret is missing"
+            exit 1
+          fi
+          printf '%s' "$SIGNING_KEYSTORE_B64" | base64 -d > android-app/app/signing.keystore
+          cat > android-app/signing.properties <<EOF
+          storeFile=signing.keystore
+          storePassword=$SIGNING_STORE_PASSWORD
+          keyAlias=$SIGNING_KEY_ALIAS
+          keyPassword=$SIGNING_KEY_PASSWORD
+          EOF
+
       # The repo's gradle.properties points Gradle at hatch-egress-proxy,
       # a host that only exists on Muse's own machine. On this runner there
       # is no proxy, so those lines are removed for this run only.
@@ -47,17 +69,23 @@ jobs:
           sed -i '/^systemProp\./d' android-app/gradle.properties
           echo "sdk.dir=$ANDROID_HOME" > android-app/local.properties
 
-      # No unit tests here: one test reads ../trading-off-build/voice-feedback.php,
-      # which is not in the repo, so it cannot pass on a clean runner.
-      - name: Build debug APK
+      # Unit tests run first, including the voice-gate tests and the
+      # v1.1.12 test that reads the server voice-feedback file, which
+      # now lives in the repo at trading-off-build/voice-feedback.php.
+      - name: Run unit tests
         working-directory: android-app
         run: |
           chmod +x gradlew
+          ./gradlew :app:testDebugUnitTest --console=plain --no-daemon
+
+      - name: Build debug APK
+        working-directory: android-app
+        run: |
           ./gradlew :app:assembleDebug --console=plain --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: prognos-1.1.17-apk
+          name: prognos-1.1.18-apk
           path: android-app/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error

@@ -206,12 +206,7 @@ class WhisperRecognizer(
 
     private fun runLoop(rec: AudioRecord) {
         val segment = ByteArrayOutputStream()
-        var speechHeard = false
-        var onsetStreak = 0
-        var lastSpeechMs = 0L
-        var noiseFloorSum = 0.0
-        var noiseFloorFrames = 0
-        var noiseFloorRms = SILENCE_RMS / NOISE_FLOOR_MULTIPLIER
+        val gate = VoiceGate()
 
         val startedMs = SystemClock.uptimeMillis()
         val buf = ByteArray(4096)
@@ -235,37 +230,13 @@ class WhisperRecognizer(
                 onEvent?.invoke(VoiceEngine.Event.Level(normLevel))
             }
 
-            // Calibrate the room noise floor, but only from quiet frames.
-            // If the user starts speaking the moment the sheet opens,
-            // those loud frames are speech, not room noise: averaging
-            // them into the floor would raise the speech threshold
-            // above their own voice, so the gate would reject
-            // everything they say and the listen would hear nothing.
-            if (elapsedMs < CALIBRATION_MS && !speechHeard) {
-                if (rms < SILENCE_RMS) {
-                    noiseFloorSum += rms
-                    noiseFloorFrames++
-                    noiseFloorRms = (noiseFloorSum / noiseFloorFrames).coerceIn(150.0, 1200.0)
-                    continue
-                }
-            }
+            if (gate.onFrame(rms, now, elapsedMs)) continue
 
-            if (!isSilentAdaptive(rms, noiseFloorRms)) {
-                onsetStreak++
-                if (onsetStreak >= ONSET_FRAMES_REQUIRED) {
-                    speechHeard = true
-                    lastSpeechMs = now
-                }
-            } else {
-                onsetStreak = 0
-            }
-
-            if (speechHeard) {
+            if (gate.speechHeard) {
                 segment.write(buf, 0, read)
             }
 
-            val silenceMs = if (speechHeard) now - lastSpeechMs else 0L
-            if (shouldFinalize(speechHeard, silenceMs, elapsedMs)) break
+            if (gate.shouldFinalize(now, elapsedMs)) break
         }
 
         try {
@@ -283,7 +254,7 @@ class WhisperRecognizer(
         if (released.get()) return
 
         val bytes = segment.toByteArray()
-        if (!speechHeard || bytes.isEmpty()) {
+        if (!gate.speechHeard || bytes.isEmpty()) {
             onEvent?.invoke(VoiceEngine.Event.Error("I did not catch that. Say it again.", silent = true))
             return
         }
