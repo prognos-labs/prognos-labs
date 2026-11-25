@@ -1,2 +1,2 @@
 # Keep model classes for Gson
--keep class xyz.fruitslice.prognos.model.** { *; }
+-keep class xyz.prognoslabs.app.model.** { *; }

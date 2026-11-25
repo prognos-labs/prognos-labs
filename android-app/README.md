@@ -1,7 +1,7 @@
 # Prognos Labs - Android app (v1.1.0)
 
 Native Android app for Prognos Labs, in Kotlin with Jetpack Compose.
-Package: `xyz.fruitslice.prognos`. App name: Prognos Labs.
+Package: `xyz.prognoslabs.app`. App name: Prognos Labs.
 Min SDK 26, target SDK 34.
 
 v1.1.0 is the upgrade build: versionName 1.1.0, versionCode 10. It
@@ -25,7 +25,7 @@ this build is `prognos-android-debug-v1.1.0.apk`.
   splash, auth wordmark, dashboard fallback name, Settings profile
   and About all read "Prognos Labs". Identifiers were renamed too
   (`PrognosApi`, `PrognosFontFamily`, `PrognosTheme`, ...). Package
-  `xyz.fruitslice.prognos` stays.
+  `xyz.prognoslabs.app` stays.
 - Server auth (`data/AuthApi.kt`, `data/TokenStore.kt`,
   `data/Repository.kt` AuthStore): signup (name + email + password)
   sends an OTP, the OTP screen takes 6 digits, then the app signs in
@@ -119,7 +119,7 @@ creation fails on a device.
 ## What was verified live vs not
 
 - Verified: the APK builds, signs (debug key), installs structurally
-  (aapt badging clean: package `xyz.fruitslice.prognos`,
+  (aapt badging clean: package `xyz.prognoslabs.app`,
   versionCode 10, versionName 1.1.0, min SDK 26, target SDK 34,
   INTERNET + ACCESS_NETWORK_STATE, label "Prognos Labs"), the auth
   and trading calls run over real HTTP against a local PHP stub that
@@ -139,7 +139,7 @@ creation fails on a device.
 # Prognosis - Android app (v1)
 
 Native Android app for Prognos Labs, in Kotlin with Jetpack Compose.
-Package: `xyz.fruitslice.prognos`. App name: Prognosis.
+Package: `xyz.prognoslabs.app`. App name: Prognosis.
 Min SDK 26, target SDK 34.
 
 v1 is the release build: versionName 1.0.0, versionCode 9 (the 9th
@@ -188,7 +188,7 @@ password validation and the amount input filter). The Settings
 screen navigation is a Compose NavHost route, covered by the build.
 
 Native Android app for Prognos Labs, in Kotlin with Jetpack Compose.
-Package: `xyz.fruitslice.prognos`. App name: Prognosis.
+Package: `xyz.prognoslabs.app`. App name: Prognosis.
 Min SDK 26, target SDK 34.
 
 v8 is a fidelity rebuild of the approved design, not a new design. Flint

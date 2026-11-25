@@ -19,15 +19,15 @@ Proxy configured for Gradle HTTP from env (host set, credentials not logged)
 > Task :app:processDebugManifestForPackage UP-TO-DATE
 > Task :app:processDebugResources UP-TO-DATE
 > Task :app:compileDebugKotlin
-w: file:///home/hatch/workspace/prognos-labs/android-app/app/src/main/java/xyz/fruitslice/prognos/ui/Background.kt:181:17 'fun quadraticBezierTo(x1: Float, y1: Float, x2: Float, y2: Float): Unit' is deprecated. Use quadraticTo() for consistency with cubicTo().
-w: file:///home/hatch/workspace/prognos-labs/android-app/app/src/main/java/xyz/fruitslice/prognos/ui/Background.kt:183:17 'fun quadraticBezierTo(x1: Float, y1: Float, x2: Float, y2: Float): Unit' is deprecated. Use quadraticTo() for consistency with cubicTo().
-w: file:///home/hatch/workspace/prognos-labs/android-app/app/src/main/java/xyz/fruitslice/prognos/ui/Screens.kt:314:35 'val Icons.Filled.Logout: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Logout.
-w: file:///home/hatch/workspace/prognos-labs/android-app/app/src/main/java/xyz/fruitslice/prognos/ui/Screens.kt:354:46 'val Icons.Filled.ShowChart: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ShowChart.
-w: file:///home/hatch/workspace/prognos-labs/android-app/app/src/main/java/xyz/fruitslice/prognos/ui/Screens.kt:362:34 'val Icons.Filled.ShowChart: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ShowChart.
-w: file:///home/hatch/workspace/prognos-labs/android-app/app/src/main/java/xyz/fruitslice/prognos/ui/Screens.kt:686:26 'val Icons.Filled.ShowChart: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ShowChart.
-w: file:///home/hatch/workspace/prognos-labs/android-app/app/src/main/java/xyz/fruitslice/prognos/ui/Screens.kt:713:62 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
-w: file:///home/hatch/workspace/prognos-labs/android-app/app/src/main/java/xyz/fruitslice/prognos/ui/Screens.kt:808:62 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
-w: file:///home/hatch/workspace/prognos-labs/android-app/app/src/main/java/xyz/fruitslice/prognos/ui/Screens.kt:901:38 'val Icons.Filled.ShowChart: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ShowChart.
+w: file:///home/hatch/workspace/prognos-labs/android-app/app/src/main/java/xyz/prognoslabs/app/ui/Background.kt:181:17 'fun quadraticBezierTo(x1: Float, y1: Float, x2: Float, y2: Float): Unit' is deprecated. Use quadraticTo() for consistency with cubicTo().
+w: file:///home/hatch/workspace/prognos-labs/android-app/app/src/main/java/xyz/prognoslabs/app/ui/Background.kt:183:17 'fun quadraticBezierTo(x1: Float, y1: Float, x2: Float, y2: Float): Unit' is deprecated. Use quadraticTo() for consistency with cubicTo().
+w: file:///home/hatch/workspace/prognos-labs/android-app/app/src/main/java/xyz/prognoslabs/app/ui/Screens.kt:314:35 'val Icons.Filled.Logout: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Logout.
+w: file:///home/hatch/workspace/prognos-labs/android-app/app/src/main/java/xyz/prognoslabs/app/ui/Screens.kt:354:46 'val Icons.Filled.ShowChart: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ShowChart.
+w: file:///home/hatch/workspace/prognos-labs/android-app/app/src/main/java/xyz/prognoslabs/app/ui/Screens.kt:362:34 'val Icons.Filled.ShowChart: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ShowChart.
+w: file:///home/hatch/workspace/prognos-labs/android-app/app/src/main/java/xyz/prognoslabs/app/ui/Screens.kt:686:26 'val Icons.Filled.ShowChart: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ShowChart.
+w: file:///home/hatch/workspace/prognos-labs/android-app/app/src/main/java/xyz/prognoslabs/app/ui/Screens.kt:713:62 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+w: file:///home/hatch/workspace/prognos-labs/android-app/app/src/main/java/xyz/prognoslabs/app/ui/Screens.kt:808:62 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+w: file:///home/hatch/workspace/prognos-labs/android-app/app/src/main/java/xyz/prognoslabs/app/ui/Screens.kt:901:38 'val Icons.Filled.ShowChart: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ShowChart.
 
 > Task :app:javaPreCompileDebug UP-TO-DATE
 > Task :app:compileDebugJavaWithJavac NO-SOURCE

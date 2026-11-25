@@ -8,7 +8,7 @@ He is right. This file is the measured comparison of the APPROVED design preview
 with Playwright Firefox, geometry probed from the live DOM + CSS) against the v7 app
 (Flint's dark-login screenshot `SmartSelect_20261117_101707_Prognosis.png`, 1440x3020,
 measured with a pixel scan at 3.692 px/dp; his v6 58s screen recording, frames at
-`/tmp/v6video/`; and the v7 source in `app/src/main/java/xyz/fruitslice/prognos/`).
+`/tmp/v6video/`; and the v7 source in `app/src/main/java/xyz/prognoslabs/app/`).
 
 Phone frame in the preview: 390 CSS px wide, 892 tall (includes a 9:41 status bar).
 All preview positions below are CSS px in that frame. All v7 positions are dp on

@@ -76,7 +76,7 @@ std::string transcribeWithContext(
 extern "C" {
 
 JNIEXPORT jlong JNICALL
-Java_xyz_fruitslice_prognos_voice_WhisperNative_nativeInit(
+Java_xyz_prognoslabs_app_voice_WhisperNative_nativeInit(
     JNIEnv *env, jobject /* thiz */, jstring modelPath
 ) {
     if (modelPath == nullptr) return 0;
@@ -90,7 +90,7 @@ Java_xyz_fruitslice_prognos_voice_WhisperNative_nativeInit(
 }
 
 JNIEXPORT jstring JNICALL
-Java_xyz_fruitslice_prognos_voice_WhisperNative_nativeTranscribe(
+Java_xyz_prognoslabs_app_voice_WhisperNative_nativeTranscribe(
     JNIEnv *env,
     jobject /* thiz */,
     jlong contextPtr,
@@ -145,7 +145,7 @@ Java_xyz_fruitslice_prognos_voice_WhisperNative_nativeTranscribe(
 }
 
 JNIEXPORT void JNICALL
-Java_xyz_fruitslice_prognos_voice_WhisperNative_nativeFree(
+Java_xyz_prognoslabs_app_voice_WhisperNative_nativeFree(
     JNIEnv * /* env */, jobject /* thiz */, jlong contextPtr
 ) {
     whisper_context *ctx = reinterpret_cast<whisper_context *>(contextPtr);

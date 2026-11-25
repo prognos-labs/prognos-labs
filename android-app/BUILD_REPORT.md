@@ -23,8 +23,8 @@ committed to git. The v1.0.0 APK is untouched
 - APK: `app/build/outputs/apk/debug/app-debug.apk` (19,358,802 bytes, ~18.5 MB)
 - Copy: `~/workspace/prognos-labs/prognos-android-debug-v1.1.0.apk` (same file)
 - SHA-256: `8dd172ef83a899410a65b7f41213b3d409cf40f2a995386a572476d64fe29514`
-- Package: `xyz.fruitslice.prognos`, versionCode 10, versionName 1.1.0
-- App name: Prognos Labs. Launcher activity: `xyz.fruitslice.prognos.MainActivity`
+- Package: `xyz.prognoslabs.app`, versionCode 10, versionName 1.1.0
+- App name: Prognos Labs. Launcher activity: `xyz.prognoslabs.app.MainActivity`
 - Min SDK 26, target SDK 34, compile SDK 34
 - Permissions: INTERNET, ACCESS_NETWORK_STATE (plus the system-added dynamic-receiver permission)
 - Icon: adaptive icon from the ribbon-P logo (v3), all densities present
@@ -145,8 +145,8 @@ v5 is a design correction on top of v4. Flint rated v4 4/10: the hero sparkline 
 - APK: `app/build/outputs/apk/debug/app-debug.apk` (18 MB)
 - Copy: `~/workspace/prognos-labs/prognos-android-debug.apk` (same file, v8 copy overwritten)
 - SHA-256: `37c980f04c0c2a4adefa7e075b92e13d986c052446eb9f97f38c003f3980d53c`
-- Package: `xyz.fruitslice.prognos`, versionCode 9, versionName 1.0.0 (v1 release)
-- App name: Prognosis. Launcher activity: `xyz.fruitslice.prognos.MainActivity`
+- Package: `xyz.prognoslabs.app`, versionCode 9, versionName 1.0.0 (v1 release)
+- App name: Prognosis. Launcher activity: `xyz.prognoslabs.app.MainActivity`
 - Min SDK 26, target SDK 34, compile SDK 34
 - Permissions: INTERNET, ACCESS_NETWORK_STATE (plus the system-added dynamic-receiver permission)
 - Icon: adaptive icon from the ribbon-P logo (v3), all densities present
@@ -530,7 +530,7 @@ Kept from v4: designed login/signup form (now with the background design and the
 
 ## What was verified live vs not
 
-- Verified: the APK builds, signs (debug key), installs structurally (aapt badging clean: package `xyz.fruitslice.prognos`, versionCode 9, versionName 1.0.0, min SDK 26, target SDK 34, INTERNET + ACCESS_NETWORK_STATE), parses real live API responses (fixtures are real responses captured from the live site), and the forecast thresholds match the website rule. Auth validation, market-list filtering/sorting/pagination, and the honest empty states are covered by unit tests. The background design is static image + vector work: one Canvas plus one Image per screen, drawn once per composition, no animation, no per-frame work, no bitmap backgrounds, so it costs a handful of draw calls at composition time and nothing after that. The auth and wallet backgrounds were verified by rendering the exact app values (same PNG, size, position, alpha) in HTML and screenshotting them: the motif reads clearly in both themes on both screens.
+- Verified: the APK builds, signs (debug key), installs structurally (aapt badging clean: package `xyz.prognoslabs.app`, versionCode 9, versionName 1.0.0, min SDK 26, target SDK 34, INTERNET + ACCESS_NETWORK_STATE), parses real live API responses (fixtures are real responses captured from the live site), and the forecast thresholds match the website rule. Auth validation, market-list filtering/sorting/pagination, and the honest empty states are covered by unit tests. The background design is static image + vector work: one Canvas plus one Image per screen, drawn once per composition, no animation, no per-frame work, no bitmap backgrounds, so it costs a handful of draw calls at composition time and nothing after that. The auth and wallet backgrounds were verified by rendering the exact app values (same PNG, size, position, alpha) in HTML and screenshotting them: the motif reads clearly in both themes on both screens.
 - NOT verified: launching the app on a real phone or emulator. No emulator was run in this VM (RAM too tight: 7.7 GB total, ~500 MB free during the build). **Flint's phone test is the real proof.** Install the APK, sign up once, and confirm the Dashboard loads with live markets. Download it in Chrome, not DuckDuckGo: DuckDuckGo saves it as a `.bin` file and its file provider will not let a file manager copy it out, so the installer never appears (seen on v1, 16 Nov ~21:12 WAT).
 - NOT verified live: the win line on a real market (same caveat as the website: no listed market window had started at build time; the chart shows the last hour with "Win line not set yet" and a neutral fill until one starts).
 - The learning endpoint reported 0 scored forecasts at fixture time, so no challenger has been promoted; the forecast uses the starting formula.
@@ -553,7 +553,7 @@ Building here needed three workarounds, all documented in README.md and already 
 
 ## Files
 
-- Source: this folder (`app/src/main/java/xyz/fruitslice/prognos/`, `app/src/main/res/`, `app/src/test/`)
+- Source: this folder (`app/src/main/java/xyz/prognoslabs/app/`, `app/src/main/res/`, `app/src/test/`)
 - `README.md` - what v1 includes/excludes, install steps, rebuild steps, Play Store needs
 - `build-log-assembleDebug-v1.txt` / `build-log-testDebugUnitTest-v1.txt` - successful v1 logs (45 passed)
 - `build-log-assembleDebug-v6.txt` / `build-log-assembleDebug-v6-final.txt` - successful v6 assembleDebug logs (first build, then the clean rebuild after the TradingLock rename)

@@ -8,11 +8,11 @@ plugins {
 }
 
 android {
-    namespace = "xyz.fruitslice.prognos"
+    namespace = "xyz.prognoslabs.app"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "xyz.fruitslice.prognos"
+        applicationId = "xyz.prognoslabs.app"
         minSdk = 26
         targetSdk = 34
         versionCode = 30
