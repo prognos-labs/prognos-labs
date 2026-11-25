@@ -706,7 +706,9 @@ fun DashboardScreen(
                     title = "Total balance",
                     note = "Deposits open with trading.",
                     balanceText = balanceText,
-                    btcText = btcText
+                    btcText = btcText,
+                    onDeposit = { vm.openTradingSite() },
+                    onWithdraw = { vm.openTradingSite() }
                 )
                 Spacer(modifier = Modifier.height(20.dp))
             }
@@ -716,12 +718,12 @@ fun DashboardScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     QuickAction(
-                        Icons.Filled.Lock, "Deposit", {}, enabled = false,
+                        Icons.Filled.ArrowDownward, "Deposit", { vm.openTradingSite() }, enabled = TradingLock.depositsOpen,
                         bg = if (dark) Color(0xFF232B12) else Color(0xFFF1F6DE),
                         tint = if (dark) Lime else c.grey
                     )
                     QuickAction(
-                        Icons.Filled.Lock, "Withdraw", {}, enabled = false,
+                        Icons.Filled.ArrowUpward, "Withdraw", { vm.openTradingSite() }, enabled = TradingLock.withdrawalsOpen,
                         bg = if (dark) Color(0xFF1C1C1C) else Color(0xFFF1F6DE),
                         tint = if (dark) Color.White else c.grey
                     )
@@ -1041,7 +1043,9 @@ fun PortfolioScreen(vm: AppViewModel, onBrowseMarkets: () -> Unit) {
             title = "Total balance",
             note = "Deposits open with trading.",
             balanceText = balanceText,
-            btcText = btcText
+            btcText = btcText,
+            onDeposit = { vm.openTradingSite() },
+            onWithdraw = { vm.openTradingSite() }
         )
         Spacer(modifier = Modifier.height(20.dp))
         SectionHeader("Performance")
@@ -1060,7 +1064,7 @@ fun PortfolioScreen(vm: AppViewModel, onBrowseMarkets: () -> Unit) {
             "No holdings yet",
             "Your assets will show here once you deposit.",
             "Deposit",
-            {},
+            { vm.openTradingSite() },
             actionEnabled = TradingLock.depositsOpen,
             actionPrimary = false
         )

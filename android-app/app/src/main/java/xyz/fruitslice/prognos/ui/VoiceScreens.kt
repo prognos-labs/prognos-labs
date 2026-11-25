@@ -468,7 +468,7 @@ private fun VoiceConfirmContent(
         Text("Say yes or no", fontSize = 14.sp, color = c.grey)
         if (!tradingReady) {
             Spacer(modifier = Modifier.height(8.dp))
-            Text("Trading is not open yet.", fontSize = 13.sp, color = c.grey)
+            Text("Please link your wallet to Prognos Labs first.", fontSize = 13.sp, color = c.grey)
         }
     }
 }

@@ -270,14 +270,14 @@ class VoiceUiRobolectricTest {
     }
 
     @Test
-    fun confirmCardShowsTradingClosed() {
-        // v1.1.16: with trading closed, the read-back still shows
-        // and says so plainly. There is no Confirm button to
-        // disable any more: the call screen has no buttons but the
-        // hang-up.
+    fun confirmCardShowsLinkWalletWhenNotReady() {
+        // v1.1.20: with trading open but the wallet not linked, the
+        // read-back still shows and says so plainly. There is no
+        // Confirm button to disable any more: the call screen has no
+        // buttons but the hang-up.
         goToMarkets()
         setSheet(VoiceSheet.Confirm(parsedOrder(), tradingReady = false))
-        composeRule.onNodeWithText("Trading is not open yet.").assertIsDisplayed()
+        composeRule.onNodeWithText("Please link your wallet to Prognos Labs first.").assertIsDisplayed()
         composeRule.onNodeWithText("Say yes or no").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("End call").assertIsDisplayed()
     }

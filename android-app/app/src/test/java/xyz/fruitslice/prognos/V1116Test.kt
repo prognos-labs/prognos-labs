@@ -282,8 +282,8 @@ class V1116Test {
     }
 
     @Test
-    fun tradingStaysClosed() {
+    fun tradingNeedsLinkedWallet() {
         val vm = readSource("java/xyz/fruitslice/prognos/ui/AppViewModel.kt")
-        assertTrue("Trading must stay closed", vm.contains("Trading is not open yet."))
+        assertTrue("Trading must ask for a linked wallet", vm.contains("Please link your wallet to Prognos Labs first."))
     }
 }

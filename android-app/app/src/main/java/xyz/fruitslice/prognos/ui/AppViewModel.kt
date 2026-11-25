@@ -1006,7 +1006,7 @@ fun setVoiceLanguage(language: VoiceLanguage, persist: Boolean = true) {
             try {
                 val state = _tradingState.value
                 if (state !is TradingState.Ready) {
-                    _tradeMessage.value = "Trading is not open yet."
+                    _tradeMessage.value = "Please link your wallet to Prognos Labs first."
                     _tradeMessageIsError.value = true
                     onDone(false)
                     return@launch
@@ -1955,6 +1955,18 @@ private fun restartListening() {
                 message = "Sign the link message in your browser, then come back here and tap Check link.",
                 isError = false
             )
+        }
+    }
+
+    /**
+     * Opens the Prognos Labs site in the browser, where deposits and
+     * withdrawals happen through the user's own wallet. The app has no
+     * native deposit flow: the site holds the wired Gate deposit and
+     * withdrawal flows, and the user signs everything in their wallet.
+     */
+    fun openTradingSite() {
+        viewModelScope.launch {
+            _openBrowser.emit(AppConfig.LINK_PAGE_URL)
         }
     }
 

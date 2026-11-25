@@ -2,12 +2,12 @@ package xyz.fruitslice.prognos.data
 
 /**
  * Single source of truth for what is open. Trading, deposits and
- * withdrawals are all locked: nothing is open yet, so every money
- * button in the app is disabled. The UI reads these flags, never a
- * hardcoded true. Flip one flag here when trading opens.
+ * withdrawals are all open for testers (Flint, 25 Nov), so every
+ * money button in the app is enabled. The UI reads these flags,
+ * never a hardcoded true.
  */
 object TradingLock {
-    val tradingOpen: Boolean = false
-    val depositsOpen: Boolean = false
-    val withdrawalsOpen: Boolean = false
+    val tradingOpen: Boolean = true
+    val depositsOpen: Boolean = true
+    val withdrawalsOpen: Boolean = true
 }

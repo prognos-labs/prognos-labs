@@ -248,15 +248,15 @@ class V117Test {
     }
 
     @Test
-    fun closedMessagesElsewhereArePlain() {
+    fun notReadyMessagesElsewhereArePlain() {
         val vm = readSource("java/xyz/fruitslice/prognos/ui/AppViewModel.kt")
-        assertTrue("The trade message must say trading is not open yet", vm.contains("Trading is not open yet."))
+        assertTrue("The trade message must ask for a linked wallet", vm.contains("Please link your wallet to Prognos Labs first."))
         assertTrue(
             "A failed wallet link must say the app could not be reached",
             vm.contains("Could not reach Prognos Labs. Please try again later.")
         )
         val screens = readSource("java/xyz/fruitslice/prognos/ui/VoiceScreens.kt")
-        assertTrue("The confirm card must keep a plain closed line", screens.contains("Trading is not open yet."))
+        assertTrue("The confirm card must keep a plain link-wallet line", screens.contains("Please link your wallet to Prognos Labs first."))
     }
 
     // ---- 7. The cleanup: no version numbers, no status rows, no essays ----

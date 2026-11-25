@@ -59,9 +59,24 @@ class V1119Test {
     }
 
     @Test
-    fun topic8TradingClosed() {
+    fun topic8PlaceTradeNow() {
         val answer = platformAnswer("place this trade for me now")
-        assertTrue(answer!!.contains("Trading is not open yet."))
+        assertTrue(answer!!.contains("Trading is open."))
+    }
+
+    @Test
+    fun topic1BrandMishearingsStillAnswer() {
+        // v1.1.20: Groq mishears the brand name; the answer must still land.
+        for (variant in listOf("pronios", "prognus", "prognoz", "provenos", "probe news")) {
+            val answer = platformAnswer("what is $variant labs")
+            assertTrue("'$variant' must still answer what Prognos Labs is", answer!!.contains("Prognos Labs is a prediction market"))
+        }
+    }
+
+    @Test
+    fun isTradingOpenAnswersOpen() {
+        val answer = platformAnswer("is trading open")
+        assertTrue(answer!!.contains("Trading is open now."))
     }
 
     @Test

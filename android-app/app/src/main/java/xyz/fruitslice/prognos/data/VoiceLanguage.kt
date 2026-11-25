@@ -251,7 +251,7 @@ val ENGLISH_VOCAB = LanguageVocab(
     answerNews = "The latest news about {label}: {title}{source}.{more}",
     answerBalance = "Your balance is {balance}.",
     answerMarket = "{question} Yes is {yes}, No is {no}.",
-    answerTradingOpen = "Trading is not open yet.",
+    answerTradingOpen = "Trading is open now.",
     answerHowToTrade = "Pick a market, choose Buy Up or Sell Down, enter an amount and confirm. Or say it out loud and I will fill the form for you.",
     answerNoPrice = "I do not have a price for {label} right now.",
     answerNoBalance = "Your balance is not available right now.",
@@ -264,6 +264,14 @@ val ENGLISH_VOCAB = LanguageVocab(
     challengeInstructionFirst = "Say \"{phrase}\" so the app can check it is you.",
     challengeInstructionAgain = "Say \"{phrase}\" once more so the app can check your voice.",
     mishearings = listOf(
+        // v1.1.20: brand-name mishearings from the multilingual real-speech test (25 Nov).
+        Regex("\\bpronios\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognus\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognoz\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprovenos\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprovenal\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bnefrognos\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprobe\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\be\\s+therium\\b", RegexOption.IGNORE_CASE) to "ethereum",
         Regex("\\bprogno" + "sis\\b", RegexOption.IGNORE_CASE) to "prognos",
@@ -373,7 +381,7 @@ val SPANISH_VOCAB = LanguageVocab(
     answerNews = "Las últimas noticias sobre {label}: {title}{source}.{more}",
     answerBalance = "Tu saldo es {balance}.",
     answerMarket = "{question} Sí está en {yes}, No está en {no}.",
-    answerTradingOpen = "El trading todavía no está abierto.",
+    answerTradingOpen = "El trading está abierto ahora.",
     answerHowToTrade = "Elige un mercado, elige Comprar Arriba o Vender Abajo, pon una cantidad y confirma. O dilo en voz alta y yo relleno el formulario por ti.",
     answerNoPrice = "No tengo el precio de {label} ahora mismo.",
     answerNoBalance = "Tu saldo no está disponible ahora mismo.",
@@ -408,6 +416,15 @@ val SPANISH_VOCAB = LanguageVocab(
     challengeInstructionFirst = "Di \"{phrase}\" para que la app compruebe que eres tú.",
     challengeInstructionAgain = "Di \"{phrase}\" una vez más para que la app compruebe tu voz.",
     mishearings = listOf(
+        // v1.1.20: brand-name mishearings from the multilingual real-speech test (25 Nov).
+        Regex("\\bpronios\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognus\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognoz\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprovenos\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprovenal\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bnefrognos\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprobe\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognose\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\bprogno" + "sis\\b", RegexOption.IGNORE_CASE) to "prognos"
     )
@@ -497,7 +514,7 @@ val FRENCH_VOCAB = LanguageVocab(
     answerNews = "Les dernières nouvelles sur {label} : {title}{source}.{more}",
     answerBalance = "Ton solde est de {balance}.",
     answerMarket = "{question} Oui est à {yes}, Non est à {no}.",
-    answerTradingOpen = "Le trading n'est pas encore ouvert.",
+    answerTradingOpen = "Le trading est ouvert maintenant.",
     answerHowToTrade = "Choisis un marché, choisis Acheter Haut ou Vendre Bas, entre un montant et confirme. Ou dis-le à voix haute et je remplis le formulaire pour toi.",
     answerNoPrice = "Je n'ai pas le prix de {label} pour le moment.",
     answerNoBalance = "Ton solde n'est pas disponible pour le moment.",
@@ -532,6 +549,15 @@ val FRENCH_VOCAB = LanguageVocab(
     challengeInstructionFirst = "Dis \"{phrase}\" pour que l'application vérifie que c'est bien toi.",
     challengeInstructionAgain = "Dis \"{phrase}\" une fois de plus pour que l'application vérifie ta voix.",
     mishearings = listOf(
+        // v1.1.20: brand-name mishearings from the multilingual real-speech test (25 Nov).
+        Regex("\\bpronios\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognus\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognoz\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprovenos\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprovenal\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bnefrognos\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprobe\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognose\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\bprogno" + "sis\\b", RegexOption.IGNORE_CASE) to "prognos"
     )
@@ -624,7 +650,7 @@ val PORTUGUESE_VOCAB = LanguageVocab(
     answerNews = "As últimas notícias sobre {label}: {title}{source}.{more}",
     answerBalance = "Seu saldo é {balance}.",
     answerMarket = "{question} Sim está em {yes}, Não está em {no}.",
-    answerTradingOpen = "O trading ainda não está aberto.",
+    answerTradingOpen = "O trading está aberto agora.",
     answerHowToTrade = "Escolha um mercado, escolha Comprar Para Cima ou Vender Para Baixo, coloque um valor e confirme. Ou diga em voz alta e eu preencho o formulário para você.",
     answerNoPrice = "Não tenho o preço de {label} agora.",
     answerNoBalance = "Seu saldo não está disponível agora.",
@@ -659,6 +685,15 @@ val PORTUGUESE_VOCAB = LanguageVocab(
     challengeInstructionFirst = "Diga \"{phrase}\" para o app confirmar que é você.",
     challengeInstructionAgain = "Diga \"{phrase}\" mais uma vez para o app confirmar a sua voz.",
     mishearings = listOf(
+        // v1.1.20: brand-name mishearings from the multilingual real-speech test (25 Nov).
+        Regex("\\bpronios\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognus\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognoz\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprovenos\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprovenal\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bnefrognos\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprobe\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognose\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\bprogno" + "sis\\b", RegexOption.IGNORE_CASE) to "prognos"
     )
@@ -753,7 +788,7 @@ val GERMAN_VOCAB = LanguageVocab(
     answerNews = "Die neuesten Nachrichten über {label}: {title}{source}.{more}",
     answerBalance = "Dein Guthaben ist {balance}.",
     answerMarket = "{question} Ja liegt bei {yes}, Nein liegt bei {no}.",
-    answerTradingOpen = "Das Trading ist noch nicht geöffnet.",
+    answerTradingOpen = "Das Trading ist jetzt offen.",
     answerHowToTrade = "Wähle einen Markt, wähle Kaufen Hoch oder Verkaufen Runter, gib einen Betrag ein und bestätige. Oder sag es laut und ich fülle das Formular für dich aus.",
     answerNoPrice = "Ich habe gerade keinen Preis für {label}.",
     answerNoBalance = "Dein Guthaben ist gerade nicht verfügbar.",
@@ -788,6 +823,14 @@ val GERMAN_VOCAB = LanguageVocab(
     challengeInstructionFirst = "Sag \"{phrase}\", damit die App prüfen kann, dass du es bist.",
     challengeInstructionAgain = "Sag \"{phrase}\" noch einmal, damit die App deine Stimme prüfen kann.",
     mishearings = listOf(
+        // v1.1.20: brand-name mishearings from the multilingual real-speech test (25 Nov).
+        Regex("\\bpronios\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognus\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognoz\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprovenos\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprovenal\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bnefrognos\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprobe\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\bprogno" + "sis\\b", RegexOption.IGNORE_CASE) to "prognos"
     )
@@ -884,7 +927,7 @@ val TURKISH_VOCAB = LanguageVocab(
     answerNews = "{label} hakkında son haberler: {title}{source}.{more}",
     answerBalance = "Bakiyen {balance}.",
     answerMarket = "{question} Evet {yes}, Hayır {no}.",
-    answerTradingOpen = "Trading henüz açık değil.",
+    answerTradingOpen = "Trading şu an açık.",
     answerHowToTrade = "Bir piyasa seç, Yukarı Al ya da Aşağı Sat seç, bir miktar gir ve onayla. Ya da sesli söyle, formu senin için doldurayım.",
     answerNoPrice = "Şu an {label} için fiyatım yok.",
     answerNoBalance = "Bakiyen şu an kullanılamıyor.",
@@ -919,6 +962,15 @@ val TURKISH_VOCAB = LanguageVocab(
     challengeInstructionFirst = "Uygulamanın sen olduğunu doğrulaması için \"{phrase}\" de.",
     challengeInstructionAgain = "Uygulamanın sesini doğrulaması için \"{phrase}\" bir kez daha de.",
     mishearings = listOf(
+        // v1.1.20: brand-name mishearings from the multilingual real-speech test (25 Nov).
+        Regex("\\bpronios\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognus\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognoz\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprovenos\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprovenal\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bnefrognos\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprobe\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognose\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\bprogno" + "sis\\b", RegexOption.IGNORE_CASE) to "prognos"
     )
@@ -1008,7 +1060,7 @@ val ARABIC_VOCAB = LanguageVocab(
     answerNews = "آخر الأخبار عن {label}: {title}{source}.{more}",
     answerBalance = "رصيدك هو {balance}.",
     answerMarket = "{question} نعم بسعر {yes}، لا بسعر {no}.",
-    answerTradingOpen = "التداول لم يفتح بعد.",
+    answerTradingOpen = "التداول مفتوح الآن.",
     answerHowToTrade = "اختر سوقا، ثم اختر شراء صعود أو بيع هبوط، وأدخل مبلغا وأكد. أو قله بصوتك وسأملأ النموذج لك.",
     answerNoPrice = "ليس لدي سعر {label} الآن.",
     answerNoBalance = "رصيدك غير متاح الآن.",
@@ -1043,6 +1095,15 @@ val ARABIC_VOCAB = LanguageVocab(
     challengeInstructionFirst = "قل \"{phrase}\" حتى يتأكد التطبيق أنك أنت.",
     challengeInstructionAgain = "قل \"{phrase}\" مرة أخرى حتى يتأكد التطبيق من صوتك.",
     mishearings = listOf(
+        // v1.1.20: brand-name mishearings from the multilingual real-speech test (25 Nov).
+        Regex("\\bpronios\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognus\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognoz\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprovenos\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprovenal\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bnefrognos\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprobe\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognose\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\bprogno" + "sis\\b", RegexOption.IGNORE_CASE) to "prognos"
     )
@@ -1096,7 +1157,7 @@ val IGBO_VOCAB = LanguageVocab(
     answerNews = "Akụkọ ọhụrụ maka {label}: {title}{source}.{more}",
     answerBalance = "Ego gị bụ {balance}.",
     answerMarket = "{question} Yes bụ {yes}, No bụ {no}.",
-    answerTradingOpen = "Ahịa emeghebeghị.",
+    answerTradingOpen = "Ahịa emeghela ugbu a.",
     answerHowToTrade = "Họrọ ahịa, họrọ Buy Up ma ọ bụ Sell Down, tinye ego ma kwado ya.",
     answerNoPrice = "Enweghị m ọnụ ahịa {label} ugbu a.",
     answerNoBalance = "Ego gị adịghị ugbu a.",
@@ -1116,6 +1177,15 @@ val IGBO_VOCAB = LanguageVocab(
     challengeInstructionFirst = "Kwuo \"{phrase}\" ka ngwa ahụ chọpụta na ọ bụ gị.",
     challengeInstructionAgain = "Kwuo \"{phrase}\" ọzọ ka ngwa ahụ lelee olu gị.",
     mishearings = listOf(
+        // v1.1.20: brand-name mishearings from the multilingual real-speech test (25 Nov).
+        Regex("\\bpronios\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognus\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognoz\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprovenos\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprovenal\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bnefrognos\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprobe\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognose\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\bbeach\\s+coins?\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\bprogno" + "sis\\b", RegexOption.IGNORE_CASE) to "prognos"
@@ -1171,7 +1241,7 @@ val YORUBA_VOCAB = LanguageVocab(
     answerNews = "Iroyin tuntun nipa {label}: {title}{source}.{more}",
     answerBalance = "Owo rẹ jẹ {balance}.",
     answerMarket = "{question} Yes jẹ {yes}, No jẹ {no}.",
-    answerTradingOpen = "Iṣowo ko tii ṣii.",
+    answerTradingOpen = "Iṣowo ti ṣi bayii.",
     answerHowToTrade = "Yan ọja kan, yan Buy Up tabi Sell Down, tẹ iye owo sii ki o jẹrisi.",
     answerNoPrice = "Mi o ni iye {label} bayii.",
     answerNoBalance = "Owo rẹ ko si ni bayi.",
@@ -1191,6 +1261,15 @@ val YORUBA_VOCAB = LanguageVocab(
     challengeInstructionFirst = "Sọ \"{phrase}\" ki app naa le mọ pe iwọ ni.",
     challengeInstructionAgain = "Sọ \"{phrase}\" lẹẹkan si ki app naa le ṣayẹwo ohun rẹ.",
     mishearings = listOf(
+        // v1.1.20: brand-name mishearings from the multilingual real-speech test (25 Nov).
+        Regex("\\bpronios\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognus\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognoz\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprovenos\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprovenal\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bnefrognos\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprobe\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognose\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\bbeach\\s+coins?\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\bprogno" + "sis\\b", RegexOption.IGNORE_CASE) to "prognos"
@@ -1246,7 +1325,7 @@ val HAUSA_VOCAB = LanguageVocab(
     answerNews = "Sabbin labarai kan {label}: {title}{source}.{more}",
     answerBalance = "Kudinka shine {balance}.",
     answerMarket = "{question} Yes yana {yes}, No yana {no}.",
-    answerTradingOpen = "Ba a bude ciniki ba tukuna.",
+    answerTradingOpen = "Ciniki a bude yake yanzu.",
     answerHowToTrade = "Zabi kasuwa, zabi Buy Up ko Sell Down, shigar da adadi sannan ka tabbatar.",
     answerNoPrice = "Bani da farashin {label} a yanzu.",
     answerNoBalance = "Ba a iya samun adadin kudinka a yanzu ba.",
@@ -1266,6 +1345,15 @@ val HAUSA_VOCAB = LanguageVocab(
     challengeInstructionFirst = "Fadi \"{phrase}\" domin app din ya tabbatar kai ne.",
     challengeInstructionAgain = "Sake fadin \"{phrase}\" domin app din ya duba muryarka.",
     mishearings = listOf(
+        // v1.1.20: brand-name mishearings from the multilingual real-speech test (25 Nov).
+        Regex("\\bpronios\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognus\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognoz\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprovenos\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprovenal\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bnefrognos\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprobe\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognose\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\bbeach\\s+coins?\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\bprogno" + "sis\\b", RegexOption.IGNORE_CASE) to "prognos"
@@ -1322,7 +1410,7 @@ val HEBREW_VOCAB = LanguageVocab(
     answerNews = "החדשות האחרונות על {label}: {title}{source}.{more}",
     answerBalance = "היתרה שלך היא {balance}.",
     answerMarket = "{question} כן ב-{yes}, לא ב-{no}.",
-    answerTradingOpen = "המסחר עדיין לא פתוח.",
+    answerTradingOpen = "המסחר פתוח עכשיו.",
     answerHowToTrade = "בחר שוק, בחר קנייה למעלה או מכירה למטה, הזן סכום ואשר.",
     answerNoPrice = "אין לי מחיר עבור {label} כרגע.",
     answerNoBalance = "היתרה שלך לא זמינה כרגע.",
@@ -1342,6 +1430,15 @@ val HEBREW_VOCAB = LanguageVocab(
     challengeInstructionFirst = "אמור \"{phrase}\" כדי שהאפליקציה תוודא שזה אתה.",
     challengeInstructionAgain = "אמור \"{phrase}\" שוב כדי שהאפליקציה תבדוק את הקול שלך.",
     mishearings = listOf(
+        // v1.1.20: brand-name mishearings from the multilingual real-speech test (25 Nov).
+        Regex("\\bpronios\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognus\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognoz\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprovenos\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprovenal\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bnefrognos\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprobe\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognose\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\bprogno" + "sis\\b", RegexOption.IGNORE_CASE) to "prognos"
     )
@@ -1394,7 +1491,7 @@ val CHINESE_VOCAB = LanguageVocab(
     answerNews = "关于 {label} 的最新消息：{title}{source}。{more}",
     answerBalance = "你的余额是 {balance}。",
     answerMarket = "{question} 是：{yes}，否：{no}。",
-    answerTradingOpen = "交易尚未开放。",
+    answerTradingOpen = "交易现在已开放。",
     answerHowToTrade = "选择一个市场，选择买入看涨或卖出看跌，输入金额并确认。",
     answerNoPrice = "暂时没有 {label} 的价格。",
     answerNoBalance = "暂时无法获取你的余额。",
@@ -1414,6 +1511,15 @@ val CHINESE_VOCAB = LanguageVocab(
     challengeInstructionFirst = "请说出“{phrase}”以验证你的身份。",
     challengeInstructionAgain = "请再说一次“{phrase}”以验证你的声音。",
     mishearings = listOf(
+        // v1.1.20: brand-name mishearings from the multilingual real-speech test (25 Nov).
+        Regex("\\bpronios\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognus\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognoz\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprovenos\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprovenal\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bnefrognos\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprobe\s+news\\b", RegexOption.IGNORE_CASE) to "prognos",
+        Regex("\\bprognose\\b", RegexOption.IGNORE_CASE) to "prognos",
         Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\bprogno" + "sis\\b", RegexOption.IGNORE_CASE) to "prognos"
     )

@@ -23,6 +23,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Visibility
@@ -70,6 +72,7 @@ import xyz.fruitslice.prognos.data.ForecastContext
 import xyz.fruitslice.prognos.data.forecastFor
 import xyz.fruitslice.prognos.data.fmtPct
 import xyz.fruitslice.prognos.data.fmtTickerPrice
+import xyz.fruitslice.prognos.data.TradingLock
 import xyz.fruitslice.prognos.model.ASSET_LABELS
 import xyz.fruitslice.prognos.model.assetLogoRes
 import xyz.fruitslice.prognos.model.BookResponse
@@ -858,9 +861,10 @@ fun WatchlistRow(
 /**
  * Balance card. One clean dark card in both themes: total balance, a
  * short honest note, and Deposit / Withdraw buttons inside it. The
- * buttons are DISABLED, greyed with lock icons, because deposits and
- * withdrawals are locked until trading opens (see TradingLock). They
- * never navigate anywhere. Balance is always honest.
+ * buttons open the Prognos Labs site in the browser, where deposits
+ * and withdrawals happen through the user's own wallet. They are
+ * enabled only while trading is open (see TradingLock). Balance is
+ * always honest.
  *
  * v7: radius 20dp and value 33sp, exactly as the approved preview.
  * A subtle white dot field on the right edge of the dark card, as the
@@ -877,7 +881,9 @@ fun BalanceCard(
     note: String?,
     showButtons: Boolean = true,
     balanceText: String = "$0.00",
-    btcText: String? = null
+    btcText: String? = null,
+    onDeposit: () -> Unit = {},
+    onWithdraw: () -> Unit = {}
 ) {
     val c = appColors()
     Card(
@@ -924,8 +930,8 @@ fun BalanceCard(
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Button(
-                            onClick = {},
-                            enabled = false,
+                            onClick = onDeposit,
+                            enabled = TradingLock.depositsOpen,
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(
@@ -935,13 +941,13 @@ fun BalanceCard(
                                 disabledContentColor = Color.White.copy(alpha = 0.45f)
                             )
                         ) {
-                            Icon(Icons.Filled.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Filled.ArrowDownward, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("Deposit", fontWeight = FontWeight.Bold)
                         }
                         OutlinedButton(
-                            onClick = {},
-                            enabled = false,
+                            onClick = onWithdraw,
+                            enabled = TradingLock.withdrawalsOpen,
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.outlinedButtonColors(
@@ -949,7 +955,7 @@ fun BalanceCard(
                                 disabledContentColor = Color.White.copy(alpha = 0.45f)
                             )
                         ) {
-                            Icon(Icons.Filled.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Filled.ArrowUpward, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("Withdraw")
                         }
