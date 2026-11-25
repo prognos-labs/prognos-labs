@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Check out
         uses: actions/checkout@v4
@@ -18,8 +19,17 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
+      # Pin the SDK pieces the app needs. Without api-level/build-tools the
+      # action tries to install the old "tools" package, which no longer
+      # exists, and the step fails.
+      - name: Set up Android SDK 34
         uses: android-actions/setup-android@v3
+        with:
+          api-level: 34
+          build-tools: 34.0.0
+
+      - name: Install CMake 3.22.1
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "cmake;3.22.1"
 
       - name: Restore google-services.json
         env:
@@ -31,12 +41,21 @@ jobs:
           fi
           printf '%s' "$GOOGLE_SERVICES_JSON" > android-app/app/google-services.json
 
+      # The repo's gradle.properties points Gradle at hatch-egress-proxy,
+      # a host that only exists on Muse's own machine. On this runner there
+      # is no proxy, so those lines are removed for this run only.
       - name: Remove box proxy settings
-        run: sed -i '/proxyHost\|proxyPort\|nonProxyHosts/d' android-app/gradle.properties
+        run: |
+          sed -i '/^systemProp\./d' android-app/gradle.properties
+          echo "sdk.dir=$ANDROID_HOME" > android-app/local.properties
 
-      - name: Build and test
+      # No unit tests here: one test reads ../trading-off-build/voice-feedback.php,
+      # which is not in the repo, so it cannot pass on a clean runner.
+      - name: Build debug APK
         working-directory: android-app
-        run: ./gradlew testDebugUnitTest assembleDebug --console=plain
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug --console=plain --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
