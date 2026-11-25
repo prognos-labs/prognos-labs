@@ -15,7 +15,7 @@ android {
         applicationId = "xyz.fruitslice.prognos"
         minSdk = 26
         targetSdk = 34
-        versionCode = 28
+        versionCode = 29
         // v1.1.16: Whisper only, model bundled, new call screen.
         // The phone's built-in recognizer is gone: every listen
         // goes through the speech library, whose model ships
@@ -31,7 +31,7 @@ android {
         // spoken words shown as text, no stray "Thank you.", ETH
         // rows saying "No price yet". Firebase Analytics from
         // v1.1.10 is intact.
-        versionName = "1.1.18"
+        versionName = "1.1.19"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // The speech library's native code: 64-bit and 32-bit ARM.
@@ -149,6 +149,7 @@ dependencies {
     // was never wired in, and if it ever were it would log the
     // Authorization and session headers.)
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    implementation("androidx.biometric:biometric:1.1.0")
     // v1.1.10: Firebase Analytics (Google Analytics). The BOM pins
     // consistent library versions; only firebase-analytics is used.
     // No other Firebase product is wired in.

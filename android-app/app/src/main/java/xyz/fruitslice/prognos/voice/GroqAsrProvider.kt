@@ -5,8 +5,13 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.util.Locale
 import org.json.JSONObject
+import xyz.fruitslice.prognos.data.VoiceLanguage
+import xyz.fruitslice.prognos.data.voiceLanguageForLocale
+import xyz.fruitslice.prognos.data.voiceLanguageSupported
 import xyz.fruitslice.prognos.ui.AsrProvider
+import xyz.fruitslice.prognos.ui.AsrTranscript
 
 /**
  * Groq Whisper Large V3 Turbo, reached only through the Prognos Labs server
@@ -43,13 +48,28 @@ class GroqAsrProvider(
         private val SUPPORTED = setOf(
             "en", "es", "fr", "pt", "de", "tr", "ar", "yo", "ha", "he", "zh"
         )
+
+        /**
+         * Parses the JSON response from https://prognoslabs.xyz/asr.php.
+         * The proxy returns the transcript as "text" and, when it knows it,
+         * the language Groq detected as "language" (for example "yo").
+         * If "language" is absent or blank, detectedLanguage stays null and
+         * the app falls back to the language set in Settings.
+         */
+        fun parseGroqAsrResponse(jsonBody: String): AsrTranscript? {
+            val root = runCatching { JSONObject(jsonBody) }.getOrNull() ?: return null
+            val text = root.optString("text", "").trim()
+            if (text.isEmpty()) return null
+            val detected = parseDetectedLanguageCode(root.optString("language", "").trim())
+            return AsrTranscript(text = text.take(MAX_TEXT_CHARS), detectedLanguage = detected)
+        }
     }
 
     override suspend fun transcribe(
         pcm: ShortArray,
         sampleRate: Int,
         languageCode: String
-    ): String? {
+    ): AsrTranscript? {
         if (languageCode !in SUPPORTED) return null
         if (pcm.isEmpty() || sampleRate <= 0) return null
         return try {
@@ -65,8 +85,7 @@ class GroqAsrProvider(
             connection.outputStream.use { it.write(wav) }
             if (connection.responseCode != HttpURLConnection.HTTP_OK) return null
             val body = connection.inputStream.bufferedReader().use { it.readText() }
-            val text = JSONObject(body).optString("text", "").trim()
-            if (text.isEmpty()) null else text.take(MAX_TEXT_CHARS)
+            parseGroqAsrResponse(body)
         } catch (e: Exception) {
             null
         }
@@ -94,5 +113,33 @@ class GroqAsrProvider(
         for (sample in pcm) samples.putShort(sample)
         out.write(samples.array())
         return out.toByteArray()
+    }
+}
+
+/**
+ * Maps a raw language code or name from the recognizer to one of the 12 supported
+ * languages. Returns null when the code is missing, unknown, or not supported.
+ * Never guesses from text.
+ */
+fun parseDetectedLanguageCode(raw: String?): VoiceLanguage? {
+    val code = raw?.trim()?.lowercase(Locale.US).orEmpty()
+    if (code.isEmpty()) return null
+    return when (code) {
+        "en", "english" -> VoiceLanguage.ENGLISH
+        "es", "spanish" -> VoiceLanguage.SPANISH
+        "fr", "french" -> VoiceLanguage.FRENCH
+        "pt", "portuguese" -> VoiceLanguage.PORTUGUESE
+        "de", "german" -> VoiceLanguage.GERMAN
+        "tr", "turkish" -> VoiceLanguage.TURKISH
+        "ar", "arabic" -> VoiceLanguage.ARABIC
+        "ig", "igbo" -> VoiceLanguage.IGBO
+        "yo", "yoruba" -> VoiceLanguage.YORUBA
+        "ha", "hausa" -> VoiceLanguage.HAUSA
+        "he", "iw", "hebrew" -> VoiceLanguage.HEBREW
+        "zh", "chinese" -> VoiceLanguage.CHINESE
+        else -> {
+            val locale = Locale(code)
+            if (voiceLanguageSupported(locale)) voiceLanguageForLocale(locale) else null
+        }
     }
 }

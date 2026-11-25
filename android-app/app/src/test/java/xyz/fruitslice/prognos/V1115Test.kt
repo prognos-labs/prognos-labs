@@ -21,9 +21,9 @@ import xyz.fruitslice.prognos.data.parseVoiceUtterance
 class V1115Test {
 
     @Test
-    fun versionIs118() {
-        assertEquals(28, BuildConfig.VERSION_CODE)
-        assertEquals("1.1.18", BuildConfig.VERSION_NAME)
+    fun versionIs119() {
+        assertEquals(29, BuildConfig.VERSION_CODE)
+        assertEquals("1.1.19", BuildConfig.VERSION_NAME)
     }
 
     // ---- Fix 1: the mic is a header button, never floating ----

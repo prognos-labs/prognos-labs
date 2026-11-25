@@ -398,9 +398,9 @@ class V119Test {
     // ---- 11. Standing rules ----
 
     @Test
-    fun versionIs118() {
+    fun versionIs119() {
         val gradle = readSource("app/build.gradle.kts")
-        assertTrue(gradle.contains("versionCode = 28"))
-        assertTrue(gradle.contains("versionName = \"1.1.18\""))
+        assertTrue(gradle.contains("versionCode = 29"))
+        assertTrue(gradle.contains("versionName = \"1.1.19\""))
     }
 }

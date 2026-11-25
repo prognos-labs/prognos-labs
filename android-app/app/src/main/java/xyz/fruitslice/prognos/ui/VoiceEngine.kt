@@ -30,11 +30,22 @@ import xyz.fruitslice.prognos.voice.WhisperNative
 import xyz.fruitslice.prognos.voice.WhisperRecognizer
 
 /**
+ * Result of one recognition pass: the text, plus the language the
+ * recognizer reported for that turn, if any. Null when the recognizer
+ * did not report a language, and the caller falls back to the set
+ * language in Settings.
+ */
+data class AsrTranscript(
+    val text: String,
+    val detectedLanguage: VoiceLanguage? = null
+)
+
+/**
  * Optional cloud ASR provider for languages where on-device ggml-tiny
  * has low accuracy (e.g. Igbo, Yoruba, Hausa, Hebrew).
  */
 fun interface AsrProvider {
-    suspend fun transcribe(pcm: ShortArray, sampleRate: Int, languageCode: String): String?
+    suspend fun transcribe(pcm: ShortArray, sampleRate: Int, languageCode: String): AsrTranscript?
 }
 
 class VoiceEngine(
@@ -55,7 +66,12 @@ class VoiceEngine(
         data class Final(
             val text: String,
             val candidates: List<String> = listOf(text),
-            val pcm: ShortArray = shortArrayOf()
+            val pcm: ShortArray = shortArrayOf(),
+            /**
+             * Language detected for this spoken turn by Groq or on-device Whisper,
+             * or null when no language signal was returned.
+             */
+            val detectedLanguage: VoiceLanguage? = null
         ) : Event()
 
         data class Error(val message: String, val silent: Boolean = false) : Event()
@@ -179,17 +195,24 @@ class VoiceEngine(
                 }
                 is VoiceSample.Captured -> {
                     whisperScope.launch {
-                        val raw = runCatching {
+                        val result = runCatching {
                             cloudAsr?.transcribe(sample.pcm, sample.sampleRate, langCode)
                         }.getOrNull()
-                        val cleaned = raw?.let { cleanRecognizedText(it) }
+                        val cleaned = result?.text?.let { cleanRecognizedText(it) }
                         withContext(Dispatchers.Main) {
                             if (cleaned.isNullOrBlank()) {
                                 // Cloud heard nothing: fall back to on-device listening
                                 // instead of erroring, so the user just says it again once.
                                 startWhisperListening(onEvent)
                             } else {
-                                onEvent(Event.Final(cleaned, listOf(cleaned), sample.pcm))
+                                onEvent(
+                                    Event.Final(
+                                        cleaned,
+                                        listOf(cleaned),
+                                        sample.pcm,
+                                        detectedLanguage = result?.detectedLanguage
+                                    )
+                                )
                             }
                         }
                     }

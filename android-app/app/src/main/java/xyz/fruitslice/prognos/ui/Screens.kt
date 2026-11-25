@@ -2033,7 +2033,7 @@ fun MarketDetailScreen(vm: AppViewModel, marketId: String, onBack: () -> Unit) {
         // as the website trade panel does.
         val tradingReady = tradingState is TradingState.Ready
         Button(
-            onClick = { if (tradingReady) vm.placeOrder(market.id, tokenId, selectedSide, amount) },
+            onClick = { if (tradingReady) vm.requestTappedOrder(market.id, tokenId, selectedSide, amount) },
             enabled = tradingReady && !tradeBusy,
             modifier = Modifier.fillMaxWidth().height(56.dp),
             shape = RoundedCornerShape(16.dp),

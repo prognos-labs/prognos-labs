@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -56,6 +57,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import xyz.fruitslice.prognos.data.Analytics
 import xyz.fruitslice.prognos.ui.AppViewModel
+import xyz.fruitslice.prognos.ui.BiometricGate
 import xyz.fruitslice.prognos.ui.AuthScreen
 import xyz.fruitslice.prognos.ui.ChangePasswordScreen
 import xyz.fruitslice.prognos.ui.DashboardScreen
@@ -75,7 +77,7 @@ import xyz.fruitslice.prognos.data.isLinkedReturnUrl
 
 private data class Tab(val route: String, val label: String, val icon: ImageVector)
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     private val vm: AppViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -104,6 +106,15 @@ class MainActivity : ComponentActivity() {
                 } catch (e: Exception) {
                     // No browser on the device: the link screen in the
                     // Wallet tab still explains the next step.
+                }
+            }
+        }
+        // Launches the system biometric prompt only when the ViewModel
+        // requests confirmation for a trade (after voice "yes" or tap Confirm).
+        lifecycleScope.launch {
+            vm.biometricTradeRequest.collect { request ->
+                BiometricGate.authenticate(this@MainActivity) { result ->
+                    vm.onBiometricTradeResult(request.requestId, result)
                 }
             }
         }

@@ -52,6 +52,7 @@ import xyz.fruitslice.prognos.data.OrderItem
 import xyz.fruitslice.prognos.data.OtpPending
 import xyz.fruitslice.prognos.data.PositionItem
 import xyz.fruitslice.prognos.data.Repository
+import xyz.fruitslice.prognos.data.resolvePlatformAnswer
 import xyz.fruitslice.prognos.data.ThemeStore
 import xyz.fruitslice.prognos.data.TokenStore
 import xyz.fruitslice.prognos.data.TradeSizeStore
@@ -1248,8 +1249,16 @@ private fun restartListening() {
      * session open for the follow-up, so the user never has to tap
      * the mic again mid-conversation. */
     private fun processVoiceFinal(event: VoiceEngine.Event.Final) {
+        // Reply language for this spoken turn only. The detected spoken
+        // language wins when the recognizer reported one; otherwise the
+        // language set in Settings. Never mutates _voiceLanguage.
+        // For Igbo: Groq does not support Igbo, so recognition runs as
+        // English and detectedLanguage is null (or English) unless a path
+        // truly signals Igbo.
+        val setLang = _voiceLanguage.value
+        val turnLang = event.detectedLanguage ?: setLang
         val (parsed, heard) = parseBestVoiceUtterance(
-            event.candidates, _home.value.markets, _detail.value.market?.id, _voiceLanguage.value
+            event.candidates, _home.value.markets, _detail.value.market?.id, turnLang
         )
         // v1.1.15: the words the user just said show as text in the
         // sheet. Partials only arrive while speaking, and a short
@@ -1264,7 +1273,17 @@ private fun restartListening() {
                 _voiceSheet.value = VoiceSheet.Message("Opened ${parsed.label}.")
             }
             is VoiceParseResult.Question -> {
-                val answer = answerVoiceQuestion(parsed.question)
+                // For platform knowledge questions, enforce the exact 3-step fallback:
+                // detected language -> set language -> English.
+                val answer = if (parsed.question is VoiceQuestion.Knowledge) {
+                    resolvePlatformAnswer(
+                        heard.lowercase(),
+                        event.detectedLanguage,
+                        setLang
+                    )?.first ?: answerVoiceQuestion(parsed.question, turnLang)
+                } else {
+                    answerVoiceQuestion(parsed.question, turnLang)
+                }
                 recordVoiceHistory(heard, VoiceHistoryOutcome.ANSWERED)
                 if (parsed.question.isConversational) {
                     _voiceSheet.value = VoiceSheet.Conversation(answer)
@@ -1448,6 +1467,35 @@ private fun restartListening() {
      * execution happens visibly inside the sheet: the order card
      * stays up with a spinner while it places, then the filled
      * state, never a jump away from the sheet. */
+    data class BiometricTradeRequest(val requestId: Long)
+
+    private sealed class PendingBiometricTrade {
+        data class Voice(
+            val order: VoiceOrder,
+            val marketId: String,
+            val tokenId: String,
+            val asset: String
+        ) : PendingBiometricTrade()
+
+        data class Tapped(
+            val marketId: String,
+            val tokenId: String,
+            val side: TradeSide,
+            val amount: String,
+            val onDone: (Boolean) -> Unit
+        ) : PendingBiometricTrade()
+    }
+
+    private val _biometricTradeRequest = MutableSharedFlow<BiometricTradeRequest>(extraBufferCapacity = 1)
+    val biometricTradeRequest: SharedFlow<BiometricTradeRequest> = _biometricTradeRequest.asSharedFlow()
+
+    private var pendingBiometricRequestId: Long = 0L
+    private var pendingBiometricTrade: PendingBiometricTrade? = null
+
+    /**
+     * Voice confirm path: called only after the user says yes to the read back.
+     * Stays behind the closed trading gate; never shows the prompt while trading is closed.
+     */
     fun confirmVoiceOrder() {
         val sheet = _voiceSheet.value as? VoiceSheet.Confirm ?: return
         awaitingConfirmation = false
@@ -1455,7 +1503,8 @@ private fun restartListening() {
         voiceSession++ // a pending listen result is stale; ignore it
         voiceEngine.stopListening()
         val order = sheet.order
-        if (!sheet.tradingReady) return // Confirm is disabled while trading is closed
+        if (!sheet.tradingReady || _tradingState.value !is TradingState.Ready) return
+
         val market = _home.value.markets.find { it.id == order.marketId }
             ?: _detail.value.market?.takeIf { it.id == order.marketId }
         val tokenId = market?.let {
@@ -1469,8 +1518,93 @@ private fun restartListening() {
             )
             return
         }
+
+        val requestId = ++pendingBiometricRequestId
+        pendingBiometricTrade = PendingBiometricTrade.Voice(
+            order = order,
+            marketId = order.marketId,
+            tokenId = tokenId,
+            asset = market.asset ?: "more"
+        )
+        _biometricTradeRequest.tryEmit(BiometricTradeRequest(requestId))
+    }
+
+    /**
+     * Tap Confirm button path: route the on-screen Confirm button here so no
+     * execution path can skip the biometric gate. Stays behind the closed trading gate.
+     */
+    fun requestTappedOrder(
+        marketId: String,
+        tokenId: String,
+        side: TradeSide,
+        amount: String,
+        onDone: (Boolean) -> Unit = {}
+    ) {
+        if (_tradingState.value !is TradingState.Ready) {
+            onDone(false)
+            return
+        }
+        val requestId = ++pendingBiometricRequestId
+        pendingBiometricTrade = PendingBiometricTrade.Tapped(
+            marketId = marketId,
+            tokenId = tokenId,
+            side = side,
+            amount = amount,
+            onDone = onDone
+        )
+        _biometricTradeRequest.tryEmit(BiometricTradeRequest(requestId))
+    }
+
+    /**
+     * Handles the result from BiometricGate.
+     * Only BiometricResult.Success moves the trade to placeOrder().
+     */
+    fun onBiometricTradeResult(requestId: Long, result: BiometricResult) {
+        if (requestId != pendingBiometricRequestId) return
+        val pending = pendingBiometricTrade ?: return
+        pendingBiometricTrade = null
+
+        if (result !is BiometricResult.Success) {
+            val refusal = if (result is BiometricResult.NotSetUp) {
+                BiometricGate.REFUSAL_NOT_SET_UP
+            } else {
+                BiometricGate.REFUSAL_FAILED_OR_CANCELLED
+            }
+            when (pending) {
+                is PendingBiometricTrade.Voice -> {
+                    recordVoiceHistory(pending.order.readback, VoiceHistoryOutcome.CANCELLED)
+                    _voiceSheet.value = VoiceSheet.Message(refusal, isError = true)
+                    voiceEngine.speak(refusal)
+                }
+                is PendingBiometricTrade.Tapped -> {
+                    _tradeMessage.value = refusal
+                    pending.onDone(false)
+                }
+            }
+            return
+        }
+
+        // Re-check the closed trading gate before execution.
+        if (_tradingState.value !is TradingState.Ready) return
+
+        when (pending) {
+            is PendingBiometricTrade.Voice -> executeConfirmedVoiceOrder(pending)
+            is PendingBiometricTrade.Tapped -> {
+                placeOrder(
+                    pending.marketId,
+                    pending.tokenId,
+                    pending.side,
+                    pending.amount,
+                    pending.onDone
+                )
+            }
+        }
+    }
+
+    private fun executeConfirmedVoiceOrder(pending: PendingBiometricTrade.Voice) {
+        val order = pending.order
         _voiceSheet.value = VoiceSheet.Executing(order)
-        placeOrder(order.marketId, tokenId, order.side, formatVoiceAmount(order.amountUsd)) { ok ->
+        placeOrder(order.marketId, pending.tokenId, order.side, formatVoiceAmount(order.amountUsd)) { ok ->
             recordVoiceHistory(
                 order.readback,
                 if (ok) VoiceHistoryOutcome.TRADED else VoiceHistoryOutcome.CANCELLED
@@ -1481,7 +1615,7 @@ private fun restartListening() {
                 AnalyticsEvents.VOICE_ORDER,
                 mapOf(
                     AnalyticsEvents.PARAM_SIDE to if (order.side == TradeSide.UP) "up" else "down",
-                    AnalyticsEvents.PARAM_ASSET to (market?.asset ?: "more"),
+                    AnalyticsEvents.PARAM_ASSET to pending.asset,
                     AnalyticsEvents.PARAM_SUCCESS to ok.toString()
                 )
             )
@@ -1569,14 +1703,17 @@ private fun restartListening() {
         }
     }
 
-    private fun answerVoiceQuestion(q: VoiceQuestion): String {
+    private fun answerVoiceQuestion(
+        q: VoiceQuestion,
+        replyLanguage: VoiceLanguage = _voiceLanguage.value
+    ): String {
         // v1.1.10: log the answered voice question for Analytics.
         // Coarse only: the question type, plus the asset code where
         // the question names one.
         Analytics.logEvent(AnalyticsEvents.VOICE_QUESTION, voiceQuestionParams(q))
         // v1.1.12: answers follow the voice language. The English
         // strings are byte-identical to the old ones.
-        val vocab = vocabFor(_voiceLanguage.value)
+        val vocab = vocabFor(replyLanguage)
         return when (q) {
         is VoiceQuestion.Price -> {
             val asset = _home.value.ticker.find { it.asset == q.asset }
@@ -1592,8 +1729,8 @@ private fun restartListening() {
         }
         VoiceQuestion.HowToTrade -> vocab.answerHowToTrade
         VoiceQuestion.TradingOpens -> vocab.answerTradingOpen
-        VoiceQuestion.GreetingHello -> if (_voiceLanguage.value == VoiceLanguage.ENGLISH) GREETING_HELLO_ANSWER else vocab.greetingAnswer
-        VoiceQuestion.GreetingHowAreYou -> if (_voiceLanguage.value == VoiceLanguage.ENGLISH) GREETING_HOW_ARE_YOU_ANSWER else vocab.howAreYouAnswer
+        VoiceQuestion.GreetingHello -> if (replyLanguage == VoiceLanguage.ENGLISH) GREETING_HELLO_ANSWER else vocab.greetingAnswer
+        VoiceQuestion.GreetingHowAreYou -> if (replyLanguage == VoiceLanguage.ENGLISH) GREETING_HOW_ARE_YOU_ANSWER else vocab.howAreYouAnswer
         VoiceQuestion.CheckIn -> vocab.checkInAnswer
         VoiceQuestion.MostLiquid -> {
             val markets = _home.value.markets
