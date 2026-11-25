@@ -44,6 +44,15 @@ data class AsrTranscript(
  * Optional cloud ASR provider for languages where on-device ggml-tiny
  * has low accuracy (e.g. Igbo, Yoruba, Hausa, Hebrew).
  */
+/**
+ * Locale for the spoken voice (v1.1.22). Hebrew uses "iw": Android's
+ * voice engine still knows it by the old code. Igbo, Yoruba and
+ * Hausa have no voice on most phones; the speak call then fails and
+ * the text stays on screen instead of crashing.
+ */
+fun ttsLocale(language: VoiceLanguage): Locale =
+    if (language == VoiceLanguage.HEBREW) Locale("iw") else Locale(language.code)
+
 fun interface AsrProvider {
     suspend fun transcribe(pcm: ShortArray, sampleRate: Int, languageCode: String): AsrTranscript?
 }
@@ -81,7 +90,10 @@ class VoiceEngine(
 
     companion object {
         val RECOGNITION_LOCALE: Locale = Locale.US
-        const val CAPTURE_SILENCE_TO_STOP_MS = 1_500L
+        // v1.1.22: 800 ms, down from 1,500 ms. The built-in
+        // recognizer already finalizes after 750 ms of silence, so
+        // waiting longer only made the cloud path feel slow.
+        const val CAPTURE_SILENCE_TO_STOP_MS = 800L
 
         fun shouldStopCapture(speechHeard: Boolean, silenceMs: Long): Boolean =
             speechHeard && silenceMs >= CAPTURE_SILENCE_TO_STOP_MS
@@ -289,23 +301,39 @@ class VoiceEngine(
     fun speak(text: String) = speakAndThen(text, onDone = {})
 
     /**
+     * Speaks [text] in the language of this turn. Android's built-in
+     * voice is free and on the phone: no server, no key, no cost.
+     * A language with no voice on the phone (Igbo, Yoruba and Hausa
+     * usually have none) fails the speak call and the text stays on
+     * screen instead; nothing crashes.
+     */
+    fun speak(text: String, language: VoiceLanguage) =
+        speakAndThen(text, language, onDone = {})
+
+    /**
      * Speaks [text] and invokes [onDone] on the main thread only after playback
      * finishes (or immediately if TTS is unavailable), preventing TTS-to-mic echo.
      */
     fun speakAndThen(text: String, onDone: () -> Unit) {
+        speakAndThen(text, null, onDone)
+    }
+
+    fun speakAndThen(text: String, language: VoiceLanguage?, onDone: () -> Unit) {
         val utteranceId = "prognos-voice-${System.nanoTime()}"
         speakCallbacks[utteranceId] = onDone
         try {
             val existing = tts
             if (existing != null) {
-                existing.language = recognitionLocale()
+                language?.let { existing.language = ttsLocale(it) }
+                    ?: run { existing.language = recognitionLocale() }
                 val res = existing.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
                 if (res != TextToSpeech.SUCCESS) fireSpeakDone(utteranceId)
                 return
             }
             tts = TextToSpeech(context) { status ->
                 if (status == TextToSpeech.SUCCESS) {
-                    tts?.language = recognitionLocale()
+                    language?.let { tts?.language = ttsLocale(it) }
+                        ?: run { tts?.language = recognitionLocale() }
                     tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                         override fun onStart(id: String?) = Unit
                         override fun onDone(id: String?) = fireSpeakDone(id)

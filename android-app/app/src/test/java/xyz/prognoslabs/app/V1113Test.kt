@@ -36,9 +36,9 @@ class V1113Test {
         )
 
     @Test
-    fun versionIs1121() {
-        assertEquals(31, BuildConfig.VERSION_CODE)
-        assertEquals("1.1.21", BuildConfig.VERSION_NAME)
+    fun versionIs1122() {
+        assertEquals(32, BuildConfig.VERSION_CODE)
+        assertEquals("1.1.22", BuildConfig.VERSION_NAME)
     }
 
     @Test

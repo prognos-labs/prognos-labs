@@ -36,9 +36,9 @@ import xyz.prognoslabs.app.ui.settingsDropDownRows
 class V1114Test {
 
     @Test
-    fun versionIs1121() {
-        assertEquals(31, BuildConfig.VERSION_CODE)
-        assertEquals("1.1.21", BuildConfig.VERSION_NAME)
+    fun versionIs1122() {
+        assertEquals(32, BuildConfig.VERSION_CODE)
+        assertEquals("1.1.22", BuildConfig.VERSION_NAME)
     }
 
     // ---- Fix 1: settings are compact drop-down rows ----
@@ -65,12 +65,13 @@ class V1114Test {
 
     @Test
     fun captureStopsAfterSilenceFollowingSpeech() {
-        // Speech, then quiet for 1,500 ms: the capture ends on its
-        // own, so enrollment never waits on a Stop tap.
-        assertTrue(VoiceEngine.shouldStopCapture(true, 1_500L))
+        // v1.1.22: speech, then quiet for 800 ms (was 1,500 ms): the
+        // capture ends on its own, so enrollment never waits on a
+        // Stop tap, and the cloud path answers sooner.
+        assertTrue(VoiceEngine.shouldStopCapture(true, 800L))
         assertTrue(VoiceEngine.shouldStopCapture(true, 5_000L))
         // A short pause does not end it: the user may still be talking.
-        assertFalse(VoiceEngine.shouldStopCapture(true, 1_499L))
+        assertFalse(VoiceEngine.shouldStopCapture(true, 799L))
         assertFalse(VoiceEngine.shouldStopCapture(true, 400L))
         // Silence before any speech never ends it: the user may not
         // have started yet.

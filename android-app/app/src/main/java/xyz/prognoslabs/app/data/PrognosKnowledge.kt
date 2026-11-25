@@ -96,7 +96,16 @@ fun platformAnswer(lowerText: String, language: VoiceLanguage = VoiceLanguage.EN
                 "If I do not have live position data for you right now, I will tell you I cannot see an open position."
 
         // Topic 8: Place this trade now (trading is open)
-        t.contains("place this trade") || t.contains("trade for me now") ->
+        // v1.1.22: a bare trade request ("can you take a trade for
+        // me") is a trade to start, not a question to refuse. It
+        // gets the guided answer: which market, which side, price
+        // and amount, then a read-back. Never the out-of-scope line.
+        t.contains("place this trade") || t.contains("trade for me now") ||
+            t.contains("trade for me") || t.contains("take a trade") ||
+            t.contains("place a trade") || t.contains("make a trade") ||
+            t.contains("do a trade") || t.contains("take this trade") ||
+            t.contains("buy for me") || t.contains("place an order") ||
+            t.contains("make an order") ->
             "Trading is open. Tell me the market, your side, the price and the amount, " +
                 "and I will read the order back before anything goes through."
         // Is trading open?

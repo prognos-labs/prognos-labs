@@ -1301,9 +1301,13 @@ private fun restartListening() {
                 recordVoiceHistory(heard, VoiceHistoryOutcome.ANSWERED)
                 if (parsed.question.isConversational) {
                     _voiceSheet.value = VoiceSheet.Conversation(answer)
-                    restartListening()
+                    // v1.1.22: speak the answer aloud in the language
+                    // of this turn, then open the mic, so the spoken
+                    // answer never echoes back into the mic.
+                    voiceEngine.speakAndThen(answer, turnLang) { restartListening() }
                 } else {
                     _voiceSheet.value = VoiceSheet.Message(answer)
+                    voiceEngine.speak(answer, turnLang)
                 }
             }
             is VoiceParseResult.AskAgain -> {
@@ -1312,7 +1316,7 @@ private fun restartListening() {
                 // open so the user can say it again, without
                 // tapping the mic.
                 _voiceSheet.value = VoiceSheet.Conversation(parsed.message)
-                restartListening()
+                voiceEngine.speakAndThen(parsed.message, turnLang) { restartListening() }
             }
             is VoiceParseResult.OutOfScope -> {
                 recordVoiceHistory(heard, VoiceHistoryOutcome.ANSWERED)
@@ -1321,7 +1325,7 @@ private fun restartListening() {
                 // either: the user may ask a question that is in
                 // scope next, without tapping the mic again.
                 _voiceSheet.value = VoiceSheet.Conversation(parsed.message)
-                restartListening()
+                voiceEngine.speakAndThen(parsed.message, turnLang) { restartListening() }
             }
         }
     }
@@ -1454,6 +1458,10 @@ private fun restartListening() {
                     "I could not check your voice this time, so I will not place the order by voice. The tap buttons still work.",
                     isError = true
                 )
+                voiceEngine.speak(
+                    "I could not check your voice this time, so I will not place the order by voice.",
+                    VoiceLanguage.ENGLISH
+                )
             }
             VoiceCheck.NOT_MATCHED -> {
                 recordVoiceHistory(heard, VoiceHistoryOutcome.CANCELLED)
@@ -1461,17 +1469,26 @@ private fun restartListening() {
                     "That did not sound like your voice. Voice trading is locked to the voice you set up.",
                     isError = true
                 )
+                voiceEngine.speak(
+                    "That did not sound like your voice. Voice trading is locked to the voice you set up.",
+                    VoiceLanguage.ENGLISH
+                )
             }
             VoiceCheck.MATCHED -> {
                 val ready = _tradingState.value is TradingState.Ready
                 _voiceSheet.value = VoiceSheet.Confirm(order, ready)
                 // The read-back is on screen; the user answers it
-                // out loud. Listening starts now, capped at two
+                // out loud. v1.1.22: speak the read-back aloud first,
+                // then open the mic, so the spoken order never echoes
+                // back into the mic. Listening starts now, capped at two
                 // unclear tries, then the card waits for hang-up.
                 awaitingConfirmation = true
                 confirmUnclearTries = 0
                 _confirmListening.value = true
-                restartListening()
+                voiceEngine.speakAndThen(
+                    "${order.readback}. Say yes to place it, or no to cancel.",
+                    VoiceLanguage.ENGLISH
+                ) { restartListening() }
             }
         }
     }
@@ -1691,6 +1708,9 @@ private fun restartListening() {
      * doing. On the confirm card it cancels the order, like tapping
      * Cancel. The overlay going away is the end of the session. */
     fun hangUpVoice() {
+        // v1.1.22: stop any spoken answer first, so hanging up ends
+        // the voice at once instead of letting it talk on.
+        voiceEngine.stopSpeaking()
         if (_voiceSheet.value is VoiceSheet.Confirm) {
             cancelVoiceOrder()
             return
