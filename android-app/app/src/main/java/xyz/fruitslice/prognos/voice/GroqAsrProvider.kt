@@ -6,7 +6,7 @@ import java.net.URL
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.Locale
-import org.json.JSONObject
+import com.google.gson.JsonParser
 import xyz.fruitslice.prognos.data.VoiceLanguage
 import xyz.fruitslice.prognos.data.voiceLanguageForLocale
 import xyz.fruitslice.prognos.data.voiceLanguageSupported
@@ -55,12 +55,15 @@ class GroqAsrProvider(
          * the language Groq detected as "language" (for example "yo").
          * If "language" is absent or blank, detectedLanguage stays null and
          * the app falls back to the language set in Settings.
+         * Gson, not org.json: org.json is a stub in plain JVM unit tests.
          */
         fun parseGroqAsrResponse(jsonBody: String): AsrTranscript? {
-            val root = runCatching { JSONObject(jsonBody) }.getOrNull() ?: return null
-            val text = root.optString("text", "").trim()
+            val root = runCatching { JsonParser.parseString(jsonBody).asJsonObject }.getOrNull() ?: return null
+            val text = root.get("text")?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty()
             if (text.isEmpty()) return null
-            val detected = parseDetectedLanguageCode(root.optString("language", "").trim())
+            val detected = parseDetectedLanguageCode(
+                root.get("language")?.takeIf { it.isJsonPrimitive }?.asString
+            )
             return AsrTranscript(text = text.take(MAX_TEXT_CHARS), detectedLanguage = detected)
         }
     }

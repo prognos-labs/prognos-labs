@@ -414,8 +414,20 @@ class V116Test {
     fun voiceConfirmGoesThroughTheSamePlaceOrder() {
         val vm = readSource("java/xyz/fruitslice/prognos/ui/AppViewModel.kt")
         val body = funBody(vm, "fun confirmVoiceOrder(")
-        assertTrue("Voice confirm must call placeOrder", body.contains("placeOrder("))
+        // v1.1.19: voice confirm no longer executes directly. It asks
+        // the biometric gate first, and only a passed check reaches
+        // placeOrder (in onBiometricTradeResult).
+        assertTrue("Voice confirm must ask the biometric gate", body.contains("BiometricTradeRequest"))
+        assertFalse("Voice confirm must not call placeOrder directly", body.contains("placeOrder("))
         assertFalse("Voice confirm must not call the trading repo directly", body.contains("tradingRepo.placeOrder"))
+    }
+
+    @Test
+    fun biometricSuccessLeadsToPlaceOrder() {
+        val vm = readSource("java/xyz/fruitslice/prognos/ui/AppViewModel.kt")
+        val body = funBody(vm, "fun onBiometricTradeResult(")
+        assertTrue("Biometric success must lead to placeOrder", body.contains("placeOrder("))
+        assertTrue("Only biometric success must reach placeOrder", body.contains("BiometricResult.Success"))
     }
 
     @Test

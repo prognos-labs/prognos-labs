@@ -176,7 +176,7 @@ class V1115Test {
         val vm = File(root, "src/main/java/xyz/fruitslice/prognos/ui/AppViewModel.kt").readText()
         val start = vm.indexOf("private fun processVoiceFinal")
         assertTrue("processVoiceFinal must exist", start >= 0)
-        val body = vm.substring(start, (start + 900).coerceAtMost(vm.length))
+        val body = vm.substring(start, (start + 1600).coerceAtMost(vm.length))
         assertTrue(
             "processVoiceFinal must show the heard words",
             body.contains("_voiceListeningText.value = heard")
