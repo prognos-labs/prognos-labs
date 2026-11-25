@@ -609,11 +609,13 @@ fun DashboardScreen(
                     fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = c.ink
                 )
             }
+            val (bellScale, bellSource) = rememberPressScale()
             Box(
                 modifier = Modifier
                     .size(40.dp)
                     .border(1.dp, c.border, RoundedCornerShape(20.dp))
-                    .clickable { onOpenNotifications() },
+                    .graphicsLayer(scaleX = bellScale, scaleY = bellScale)
+                    .clickable(interactionSource = bellSource, indication = null) { onOpenNotifications() },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(Icons.Filled.Notifications, contentDescription = "Notifications", tint = c.ink, modifier = Modifier.size(20.dp))
@@ -629,11 +631,13 @@ fun DashboardScreen(
                 }
             }
             Spacer(modifier = Modifier.width(8.dp))
+            val (themeScale, themeSource) = rememberPressScale()
             Box(
                 modifier = Modifier
                     .size(40.dp)
                     .border(1.dp, c.border, RoundedCornerShape(20.dp))
-                    .clickable { vm.toggleDarkMode() },
+                    .graphicsLayer(scaleX = themeScale, scaleY = themeScale)
+                    .clickable(interactionSource = themeSource, indication = null) { vm.toggleDarkMode() },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -649,6 +653,7 @@ fun DashboardScreen(
             // content.
             VoiceMicHeaderButton(onClick = { vm.onMicTapped() })
             Spacer(modifier = Modifier.width(8.dp))
+            val (avatarScale, avatarSource) = rememberPressScale()
             // v9: the avatar opens Settings. v8 drew it with no click
             // handler, so tapping it did nothing on Flint's phone.
             Box(
@@ -658,7 +663,8 @@ fun DashboardScreen(
                         if (dark) Lime else Color(0xFF111111),
                         RoundedCornerShape(20.dp)
                     )
-                    .clickable(onClickLabel = "Settings") { onOpenSettings() },
+                    .graphicsLayer(scaleX = avatarScale, scaleY = avatarScale)
+                    .clickable(onClickLabel = "Settings", interactionSource = avatarSource, indication = null) { onOpenSettings() },
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -1248,6 +1254,8 @@ fun SettingsScreen(
     val currency by vm.displayCurrency.collectAsState()
     val defaultAmount by vm.defaultTradeAmount.collectAsState()
     val feedbackOptIn by vm.voiceFeedbackOptIn.collectAsState()
+    val voiceLanguage by vm.voiceLanguage.collectAsState()
+    var showLanguagePicker by remember { mutableStateOf(false) }
     var tradeSizeInput by remember(defaultAmount) { mutableStateOf(defaultAmount) }
     var expandedRow by remember { mutableStateOf<SettingsRowId?>(null) }
 
@@ -1481,6 +1489,63 @@ fun SettingsScreen(
                         contentColor = if (dark) Color(0xFF111111) else c.onPrimary
                     )
                 ) { Text(if (voiceEnrolled) "Re-do voice setup" else "Set up your voice", fontWeight = FontWeight.Bold, fontSize = 15.sp) }
+Row(
+    modifier = Modifier
+        .fillMaxWidth()
+        .clickable { showLanguagePicker = true }
+        .padding(vertical = 4.dp),
+    verticalAlignment = Alignment.CenterVertically
+) {
+    Column(modifier = Modifier.weight(1f)) {
+        Text("Voice language", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = c.ink)
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            voiceLanguage.displayName + if (voiceLanguage.requiresCloudAsr) " (Cloud ASR)" else " (On-device)",
+            fontSize = 13.sp,
+            color = c.grey
+        )
+    }
+    Text("Change", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if (dark) Lime else c.ink)
+}
+
+if (showLanguagePicker) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = { showLanguagePicker = false },
+        title = { Text("Voice language", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                xyz.fruitslice.prognos.data.SUPPORTED_VOICE_LANGUAGES.forEach { lang ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                vm.setVoiceLanguage(lang)
+                                showLanguagePicker = false
+                            }
+                            .padding(vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = lang.displayName,
+                            fontSize = 15.sp,
+                            fontWeight = if (lang == voiceLanguage) FontWeight.Bold else FontWeight.Normal,
+                            color = c.ink,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (lang == voiceLanguage) {
+                            Text("Selected", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Lime)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = { showLanguagePicker = false }) {
+                Text("Close")
+            }
+        }
+    )
+}
                 Spacer(modifier = Modifier.height(16.dp))
                 HorizontalDivider(color = c.border)
                 Spacer(modifier = Modifier.height(12.dp))

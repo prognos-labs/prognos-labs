@@ -92,11 +92,13 @@ import xyz.fruitslice.prognos.data.vocabFor
  * on every screen. Tapping it opens the same voice sheet. */
 @Composable
 fun VoiceMicHeaderButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val (micScale, micSource) = rememberPressScale()
     Box(
         modifier = modifier
             .size(40.dp)
             .border(1.dp, appColors().border, RoundedCornerShape(20.dp))
-            .clickable { onClick() },
+            .graphicsLayer(scaleX = micScale, scaleY = micScale)
+            .clickable(interactionSource = micSource, indication = null) { onClick() },
         contentAlignment = Alignment.Center
     ) {
         Icon(

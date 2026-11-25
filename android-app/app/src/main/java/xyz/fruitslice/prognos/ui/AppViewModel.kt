@@ -39,6 +39,7 @@ import xyz.fruitslice.prognos.data.AuthState
 import xyz.fruitslice.prognos.data.AuthStore
 import xyz.fruitslice.prognos.data.CurrencyStore
 import xyz.fruitslice.prognos.data.cleanRecognizedText
+import xyz.fruitslice.prognos.voice.GroqAsrProvider
 import xyz.fruitslice.prognos.data.DisplayCurrency
 import xyz.fruitslice.prognos.data.FX_RATES_MAX_AGE_MS
 import xyz.fruitslice.prognos.data.FxRates
@@ -342,7 +343,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     // ---- Voice trading (v1.1.7) ----
 
     private val voiceStore = VoiceStore(app)
-    private val voiceEngine = VoiceEngine(app)
+    private val voiceEngine = VoiceEngine(app, GroqAsrProvider())
 
     /** Whether the owner has enrolled their voice for voice trading. */
     private val _voiceEnrolled = MutableStateFlow(voiceStore.loadProfile() != null)
@@ -363,6 +364,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * in English. */
     private val _deviceLanguageSupported = MutableStateFlow(voiceEngine.deviceLanguageSupported())
     val deviceLanguageSupported: StateFlow<Boolean> = _deviceLanguageSupported.asStateFlow()
+
+/** Live mic amplitude (0f..1f) for waveform animation. */
+private val _voiceAudioLevel = MutableStateFlow(0f)
+val voiceAudioLevel: StateFlow<Float> = _voiceAudioLevel.asStateFlow()
+
+/** Watchdog timer so the sheet never gets stuck on "Listening...". */
+private var listenWatchdogJob: Job? = null
+
+/** In-app language override, persisted in VoiceStore. */
+fun setVoiceLanguage(language: VoiceLanguage, persist: Boolean = true) {
+    voiceEngine.setLanguageOverride(language)
+    _voiceLanguage.value = language
+    _deviceLanguageSupported.value = true
+    if (persist) voiceStore.saveVoiceLanguage(language.code)
+}
 
     /** Opt-in anonymous failed-phrase reporting (Flint, 22 Nov):
      * off by default, one toggle in voice settings. */
@@ -454,6 +470,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var detailPollId: String? = null
 
     init {
+        voiceStore.loadVoiceLanguage()?.let { setVoiceLanguage(it, persist = false) }
         viewModelScope.launch { authStore.restore() }
         // One-off auth notices (e.g. "Registration complete") come
         // from the store; show them on the auth screens.
@@ -1077,19 +1094,38 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Starts the recognizer again without changing the sheet: the
      * follow-up after a conversational answer. Tap-to-talk still
      * rules: this only runs while a session the user started is open. */
-    private fun restartListening() {
-        voiceSession++
-        val session = voiceSession
-        voiceEngine.startListening { event ->
-            viewModelScope.launch { handleVoiceEvent(event, session) }
+private fun restartListening() {
+    voiceSession++
+    val session = voiceSession
+    _voiceAudioLevel.value = 0f
+
+    listenWatchdogJob?.cancel()
+    listenWatchdogJob = viewModelScope.launch {
+        delay(10_000L)
+        if (session == voiceSession &&
+            (_voiceSheet.value is VoiceSheet.Listening ||
+                _voiceSheet.value is VoiceSheet.VoiceCheck ||
+                awaitingConfirmation)
+        ) {
+            voiceEngine.stopListening()
+            handleVoiceEvent(
+                VoiceEngine.Event.Error("I could not hear you. Try again.", silent = true),
+                session
+            )
         }
     }
+
+    voiceEngine.startListening { event ->
+        viewModelScope.launch { handleVoiceEvent(event, session) }
+    }
+}
 
     /** Stops listening. Stops whichever voice pass is running: the
      * words pass, or the voice check pass. Stopping the check pass
      * means "I am done speaking", so the check still runs on what
      * was recorded. */
     fun stopVoiceListening() {
+        listenWatchdogJob?.cancel()
         voiceEngine.stopListening()
         voiceEngine.stopVoiceCapture()
         voiceEngine.stopSpeaking()
@@ -1102,6 +1138,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun dismissVoiceSheet() {
         val sheet = _voiceSheet.value
         if (sheet is VoiceSheet.Listening || sheet is VoiceSheet.VoiceCheck || sheet is VoiceSheet.Conversation) {
+            listenWatchdogJob?.cancel()
             voiceSession++ // the pending result is stale; ignore it
             voiceEngine.stopListening()
             voiceEngine.stopVoiceCapture()
@@ -1121,9 +1158,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 // sheet. Silence must never show as speech, so the
                 // words are cleaned first; a silent stretch shows
                 // nothing at all.
-                _voiceListeningText.value = cleanRecognizedText(event.text) ?: ""
+                _voiceListeningText.value = (cleanRecognizedText(event.text) ?: "").take(200)
             }
             is VoiceEngine.Event.Final -> {
+                listenWatchdogJob?.cancel()
+                _voiceAudioLevel.value = 0f
                 voiceSilentErrors = 0
                 // v1.1.14: a final result is cleaned the same way
                 // before it reaches the parser, so silence never
@@ -1142,6 +1181,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 else processVoiceFinal(cleanedEvent)
             }
             is VoiceEngine.Event.Error -> {
+                listenWatchdogJob?.cancel()
+                _voiceAudioLevel.value = 0f
                 if (_voiceSheet.value is VoiceSheet.Conversation) {
                     // v1.1.14: the follow-up listen after an answer
                     // failed. The answer stays on screen: the user
@@ -1184,6 +1225,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             VoiceEngine.Event.Unavailable -> {
+                listenWatchdogJob?.cancel()
+                _voiceAudioLevel.value = 0f
                 // v1.1.14: same as the error above: a dead mic after
                 // an answer must not hide the answer.
                 if (_voiceSheet.value !is VoiceSheet.Conversation) {
@@ -1209,7 +1252,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // sheet. Partials only arrive while speaking, and a short
         // sentence ends before the first one, so the final result
         // is what puts the words on screen.
-        _voiceListeningText.value = heard
+        _voiceListeningText.value = heard.take(200)
         when (parsed) {
             is VoiceParseResult.Order -> startVoiceCheck(heard, parsed.order)
             is VoiceParseResult.Navigate -> {
@@ -1255,79 +1298,84 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * the login and the read-back confirmation stay the real
      * protection. Only a matched voice reaches the confirm card. */
     private fun startVoiceCheck(heard: String, order: VoiceOrder) {
-        voicePendingOrder = order
-        voicePendingHeard = heard
-        voicePendingChallenge = pickChallengePhrase(
-            vocabFor(_voiceLanguage.value).challengePhrases, Random.Default
-        )
-        voiceChallengeAttempts = 0
-        awaitingChallengeWords = true
-        val challenge = voicePendingChallenge ?: return
-        _voiceSheet.value = VoiceSheet.VoiceCheck(challenge, VoiceCheckPhase.WORDS)
-        voiceEngine.speak(
-            fill(
-                vocabFor(_voiceLanguage.value).challengeInstructionFirst,
-                "phrase" to challenge
-            )
-        )
-        restartListening()
-    }
+    voicePendingOrder = order
+    voicePendingHeard = heard
+    voicePendingChallenge = pickChallengePhrase(
+        vocabFor(_voiceLanguage.value).challengePhrases, Random.Default
+    )
+    voiceChallengeAttempts = 0
+    awaitingChallengeWords = true
+    val challenge = voicePendingChallenge ?: return
+    _voiceSheet.value = VoiceSheet.VoiceCheck(challenge, VoiceCheckPhase.WORDS)
 
-    /** Clears the challenge pass without acting on the order. */
-    private fun clearChallengeState() {
-        awaitingChallengeWords = false
-        voicePendingChallenge = null
-        voiceChallengeAttempts = 0
-        voiceEngine.stopSpeaking()
-    }
-
-    /** The user said something back to the challenge. The phrase
-     * must match: a wrong phrase gets one more try, then the order
-     * is refused. A match moves to the voice pass, where the
-     * microphone records alone and the enrolled voice is checked
-     * on the challenge words. */
-    private fun processChallengeFinal(event: VoiceEngine.Event.Final) {
-        val challenge = voicePendingChallenge ?: return
-        val matched = event.candidates.any { challengeMatches(it, challenge, _voiceLanguage.value) }
-        Analytics.logEvent(
-            AnalyticsEvents.VOICE_CHALLENGE,
-            mapOf(AnalyticsEvents.PARAM_SUCCESS to matched.toString())
-        )
-        if (!matched) {
-            voiceChallengeAttempts++
-            if (voiceChallengeAttempts >= 2) {
-                val heard = voicePendingHeard
-                if (heard != null) recordVoiceHistory(heard, VoiceHistoryOutcome.CANCELLED)
-                voicePendingOrder = null
-                voicePendingHeard = null
-                clearChallengeState()
-                _voiceSheet.value = VoiceSheet.Message(
-                    "That was not the phrase I asked for, so I will not place the order by voice. The tap buttons still work.",
-                    isError = true
-                )
-                return
-            }
-            _voiceSheet.value = VoiceSheet.VoiceCheck(
-                challenge, VoiceCheckPhase.WORDS,
-                note = "That was not the phrase. Say it again."
-            )
-            voiceEngine.speak(
-                fill(
-                    vocabFor(_voiceLanguage.value).challengeInstructionFirst,
-                    "phrase" to challenge
-                )
-            )
+    val sessionAtPrompt = voiceSession
+    val prompt = fill(
+        vocabFor(_voiceLanguage.value).challengeInstructionFirst,
+        "phrase" to challenge
+    )
+    voiceEngine.speakAndThen(prompt) {
+        if (awaitingChallengeWords && sessionAtPrompt == voiceSession) {
             restartListening()
+        }
+    }
+}
+
+    private fun processChallengeFinal(event: VoiceEngine.Event.Final) {
+    val challenge = voicePendingChallenge ?: return
+    val matched = event.candidates.any { challengeMatches(it, challenge, _voiceLanguage.value) }
+    Analytics.logEvent(
+        AnalyticsEvents.VOICE_CHALLENGE,
+        mapOf(AnalyticsEvents.PARAM_SUCCESS to matched.toString())
+    )
+    if (!matched) {
+        voiceChallengeAttempts++
+        if (voiceChallengeAttempts >= 2) {
+            val heard = voicePendingHeard
+            if (heard != null) recordVoiceHistory(heard, VoiceHistoryOutcome.CANCELLED)
+            voicePendingOrder = null
+            voicePendingHeard = null
+            clearChallengeState()
+            _voiceSheet.value = VoiceSheet.Message(
+                "That was not the phrase I asked for, so I will not place the order by voice. The tap buttons still work.",
+                isError = true
+            )
             return
         }
-        awaitingChallengeWords = false
-        _voiceSheet.value = VoiceSheet.VoiceCheck(challenge, VoiceCheckPhase.VOICE)
+        _voiceSheet.value = VoiceSheet.VoiceCheck(
+            challenge, VoiceCheckPhase.WORDS,
+            note = "That was not the phrase. Say it again."
+        )
+        val sessionAtRetry = voiceSession
+        val retryPrompt = fill(
+            vocabFor(_voiceLanguage.value).challengeInstructionFirst,
+            "phrase" to challenge
+        )
+        voiceEngine.speakAndThen(retryPrompt) {
+            if (awaitingChallengeWords && sessionAtRetry == voiceSession) {
+                restartListening()
+            }
+        }
+        return
+    }
+
+    awaitingChallengeWords = false
+
+    // Single-pass voice check: reuse the PCM captured during the challenge phrase.
+    if (event.pcm.isNotEmpty()) {
         voiceSession++
         val session = voiceSession
-        voiceEngine.startVoiceCapture(maxSeconds = 5) { sample ->
-            viewModelScope.launch { handleVoiceCheckResult(sample, session) }
-        }
+        handleVoiceCheckResult(VoiceEngine.VoiceSample.Captured(event.pcm, 16_000), session)
+        return
     }
+
+    // Fallback to second pass only if PCM was not attached.
+    _voiceSheet.value = VoiceSheet.VoiceCheck(challenge, VoiceCheckPhase.VOICE)
+    voiceSession++
+    val session = voiceSession
+    voiceEngine.startVoiceCapture(maxSeconds = 5) { sample ->
+        viewModelScope.launch { handleVoiceCheckResult(sample, session) }
+    }
+}
 
     private fun handleVoiceCheckResult(sample: VoiceEngine.VoiceSample, session: Int) {
         if (session != voiceSession) return // dismissed or moved on; ignore it

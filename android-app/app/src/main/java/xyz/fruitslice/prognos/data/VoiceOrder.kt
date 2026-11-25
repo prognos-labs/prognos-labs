@@ -163,6 +163,11 @@ private fun numberConnectors(language: VoiceLanguage): Set<String> = when (langu
     VoiceLanguage.GERMAN -> setOf("und")
     VoiceLanguage.TURKISH -> setOf("ve")
     VoiceLanguage.ARABIC -> setOf("و")
+    VoiceLanguage.IGBO -> setOf("na")
+    VoiceLanguage.YORUBA -> setOf("ati", "le")
+    VoiceLanguage.HAUSA -> setOf("da")
+    VoiceLanguage.HEBREW -> setOf("ו")
+    VoiceLanguage.CHINESE -> emptySet()
 }
 
 /** The decimal word in one language: "fifty point five". */
@@ -174,6 +179,11 @@ private fun decimalWords(language: VoiceLanguage): Set<String> = when (language)
     VoiceLanguage.GERMAN -> setOf("komma")
     VoiceLanguage.TURKISH -> setOf("virgül", "virgul", "nokta")
     VoiceLanguage.ARABIC -> setOf("فاصلة", "نقطة")
+    VoiceLanguage.IGBO -> setOf("point")
+    VoiceLanguage.YORUBA -> setOf("point")
+    VoiceLanguage.HAUSA -> setOf("point")
+    VoiceLanguage.HEBREW -> setOf("נקודה")
+    VoiceLanguage.CHINESE -> setOf("点")
 }
 
 /** The "how" word in one language, for "how do I buy". */
@@ -185,6 +195,11 @@ private fun howWord(language: VoiceLanguage): String = when (language) {
     VoiceLanguage.GERMAN -> "wie"
     VoiceLanguage.TURKISH -> "nasıl"
     VoiceLanguage.ARABIC -> "كيف"
+    VoiceLanguage.IGBO -> "kedu"
+    VoiceLanguage.YORUBA -> "bawo"
+    VoiceLanguage.HAUSA -> "yaya"
+    VoiceLanguage.HEBREW -> "איך"
+    VoiceLanguage.CHINESE -> "怎么"
 }
 
 /** "Sell half" / "sell all" in one language: a fraction of the
@@ -198,6 +213,11 @@ private fun fractionWords(language: VoiceLanguage): Set<String> = when (language
     VoiceLanguage.GERMAN -> setOf("hälfte", "halfte", "alles")
     VoiceLanguage.TURKISH -> setOf("yarısı", "yarisi", "hepsi", "tamamı", "tamami")
     VoiceLanguage.ARABIC -> setOf("نصف", "كل", "كله")
+    VoiceLanguage.IGBO -> setOf("ọkara", "okara", "niile", "half", "all")
+    VoiceLanguage.YORUBA -> setOf("idaji", "gbogbo", "half", "all")
+    VoiceLanguage.HAUSA -> setOf("rabi", "duka", "half", "all")
+    VoiceLanguage.HEBREW -> setOf("חצי", "הכל")
+    VoiceLanguage.CHINESE -> setOf("一半", "全部", "所有")
 }
 
 private fun isNumberWord(w: String, vocab: LanguageVocab): Boolean =
@@ -319,13 +339,19 @@ private val ASSET_WORDS = mapOf(
     "بيتكوين" to "BTC",
     "إيثيريوم" to "ETH", "ايثيريوم" to "ETH", "إيثريوم" to "ETH",
     "سولانا" to "SOL", "دوجكوين" to "DOGE", "ريبل" to "XRP",
-    "بينانس" to "BNB", "زدكاش" to "ZEC", "هايبرليكويد" to "HYPE"
+    "بينانس" to "BNB", "زدكاش" to "ZEC", "هايبرليكويد" to "HYPE",
+    "ביטקוין" to "BTC", "אתריום" to "ETH", "סולאנה" to "SOL", "דוג'קוין" to "DOGE"
 )
 
 /** Multi-word coin names, checked before single words. */
 private val ASSET_PHRASES = mapOf(
     "زد كاش" to "ZEC",
-    "بيت كوين" to "BTC"
+    "بيت كوين" to "BTC",
+    "比特币" to "BTC",
+    "以太坊" to "ETH",
+    "索拉纳" to "SOL",
+    "狗狗币" to "DOGE",
+    "币安币" to "BNB"
 )
 
 /** Where the first asset word sits in the text, if any. */

@@ -80,4 +80,13 @@ class VoiceStore(
     fun clearHistory() {
         prefs.edit().remove("voice_history").apply()
     }
+
+    fun saveVoiceLanguage(code: String) {
+        prefs.edit().putString("voice_language", code).apply()
+    }
+
+    fun loadVoiceLanguage(): VoiceLanguage? {
+        val code = prefs.getString("voice_language", null) ?: return null
+        return VoiceLanguage.entries.firstOrNull { it.code == code }
+    }
 }

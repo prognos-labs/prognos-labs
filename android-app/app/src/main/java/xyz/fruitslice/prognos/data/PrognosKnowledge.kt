@@ -190,6 +190,95 @@ private fun platformAnswerTranslated(t: String, language: VoiceLanguage): String
                 "لدى Prognos Labs نظام نقاط، وتكسب نقاطا بجلب الأشخاص عبر رابط الإحالة الخاص بك. النقاط تتبع تداولك وإحالاتك."
             else -> null
         }
+VoiceLanguage.IGBO -> when {
+    t.contains("prognos") && has("gịnị bụ", "gini bu", "kedu ihe bụ", "kedu ihe bu", "gwa m", "maka", "what is") ->
+        "Prognos Labs bụ ahịa amụma nwere amụma AI. Ahịa ọ bụla nwere amụma dị mkpirikpi n'asụsụ dị mfe, ma mgbe ahịa mechiri a na-atụle amụma ahụ na nsonaazụ eziokwu ka nke ọzọ wee ka mma. Ndị mmadụ na-ekpebi ahịa ọ bụla; AI anyị anaghị emepụta ma ọ bụ kpebie ahịa. Ndị ọrụ na-ejide akpa ego na mkpịsị ugodi ha, anyị anaghị ejide ego ha."
+    has("amụma", "amuma", "forecast", "ai") && has("kedu", "gịnị", "gini", "how", "what") ->
+        "Ahịa ọ bụla nwere amụma dị mkpirikpi na-akọwa ihe na-eme na ihe nwere ike ịbịa. Mgbe ahịa mechiri na nsonaazụ eziokwu, a na-atụle amụma ahụ ka nke ọzọ wee ka mma. Ndị mmadụ na-ekpebi ahịa ọ bụla; AI anyị anaghị emepụta ma ọ bụ kpebie ahịa."
+    has("wallet", "akpa ego") && has("jikọọ", "jikoo", "connect", "link", "kedu", "how") ->
+        "Prognos Labs anaghị ejide ego. Ị na-ejikọ akpa ego gị ma debe mkpịsị ugodi gị. Anyị anaghị ahụ mkpịsị ugodi nzuzo gị ma anyị anaghị ejide ego gị."
+    has("tinye ego", "nkwụnye", "nkwunye", "deposit") ->
+        "Nkwụnye ego bụ USDT na BSC, n'elu blockchain, site na akpa ego gị. Ị na-abịanye aka na nkwụnye ego site na akpa ego gị, ego ahụ bụkwa nke gị."
+    has("mmeghe", "mbido", "launch", "mgbe", "submission") ->
+        "Ndebanye aha akpa ego emeghela ugbu a ma ga-emechi na 1 Disemba, tupu mmeghe ọha na 2 Disemba. Ahịa ga-emeghe n'ụbọchị mmeghe."
+    has("ụgwọ", "ugwo", "fee", "fees", "ego") && has("kedu", "gịnị", "gini", "ole", "how", "what") ->
+        "Ahịa ọ bụla na Prognos Labs nwere obere ụgwọ, nke ahụ bụkwa otu anyị si enweta ego. Anyị anaghị ere data ndị ọrụ."
+    has("isi", "point", "points", "referral", "kpọbata", "kpobata") ->
+        "Prognos Labs nwere usoro points, ị na-enwetakwa points mgbe ị kpọbatara ndị mmadụ site na njikọ referral gị. Points gị na-eso ahịa gị na ndị ị kpọbatara."
+    else -> null
+}
+
+VoiceLanguage.YORUBA -> when {
+    t.contains("prognos") && has("kini", "kí ni", "sọ fun mi", "so fun mi", "nipa", "what is") ->
+        "Prognos Labs jẹ ọja asọtẹlẹ ti o ni asọtẹlẹ AI. Gbogbo ọja ni asọtẹlẹ kukuru ni ede ti o rọrun, nigbati ọja ba pari a o ṣe ayẹwo asọtẹlẹ naa pẹlu abajade gidi ki eyi ti o tẹle le dara sii. Awọn eniyan lo n pinnu gbogbo ọja; AI wa kii ṣẹda tabi pinnu ọja kankan. Awọn olumulo lo n tọju apamọwọ ati bọtini wọn, a kii di owo wọn mu."
+    has("asọtẹlẹ", "asotele", "forecast", "ai") && has("bawo", "kini", "how", "what") ->
+        "Gbogbo ọja ni asọtẹlẹ kukuru ti o ṣalaye ohun ti n ṣẹlẹ ati ohun ti o le tẹle. Nigbati ọja ba pari pẹlu abajade gidi, a o ṣe ayẹwo asọtẹlẹ naa ki eyi ti o tẹle le dara sii. Awọn eniyan lo n pinnu gbogbo ọja; AI wa kii ṣẹda tabi pinnu ọja kankan."
+    has("wallet", "apamọwọ", "apamowo") && has("so pọ", "so po", "connect", "link", "bawo", "how") ->
+        "Prognos Labs kii di owo mu. O n so apamọwọ tirẹ pọ ki o si tọju bọtini tirẹ. A kii ri bọtini ikọkọ rẹ, a kii si di owo rẹ mu."
+    has("fi owo sii", "idogo", "deposit") ->
+        "Fifi owo sii jẹ USDT lori BSC, onchain, nipasẹ apamọwọ tirẹ. O n fọwọsi idogo naa lati inu apamọwọ rẹ, owo naa si jẹ tirẹ."
+    has("ifilọlẹ", "ifilole", "ṣii", "sii", "launch", "nigbawo", "submission") ->
+        "Ififorukọsilẹ apamọwọ wa ni ṣiṣi bayii yoo si ti ni Oṣu Kejila ọjọ 1, ṣaaju ifilọlẹ gbogbogbo ni Oṣu Kejila ọjọ 2. Iṣowo yoo bẹrẹ ni ọjọ ifilọlẹ."
+    has("owo iṣẹ", "owo ise", "fee", "fees", "bawo ni ẹ ṣe n ri owo") ->
+        "Gbogbo iṣowo lori Prognos Labs ni owo iṣẹ kekere, iyẹn si ni ọna ti a fi n ri owo. A kii ta data awọn olumulo."
+    has("aami", "point", "points", "referral", "itọkasi", "itokasi") ->
+        "Prognos Labs ni eto points, o si n gba points nigbati o ba mu eniyan wa nipasẹ ọna asopọ referral rẹ. Points rẹ n tẹle iṣowo ati awọn ti o mu wa."
+    else -> null
+}
+
+VoiceLanguage.HAUSA -> when {
+    t.contains("prognos") && has("menene", "mecece", "fada min", "game da", "what is") ->
+        "Prognos Labs kasuwar hasashe ce mai hasashen AI. Kowace kasuwa tana da gajeren hasashe cikin harshe mai sauki, kuma idan kasuwa ta rufe ana auna hasashen da sakamakon gaske domin na gaba ya fi kyau. Mutane ne ke yanke hukunci a kowace kasuwa; AI dinmu ba ya kirkiro ko rufe kasuwa. Masu amfani suna rike da walat da makullansu, ba ma rike kudadensu."
+    has("hasashe", "forecast", "ai") && has("yaya", "menene", "how", "what") ->
+        "Kowace kasuwa tana da gajeren hasashe da ke bayanin abin da ke faruwa da abin da ka iya zuwa. Idan kasuwa ta rufe da sakamakon gaske, ana auna hasashen domin na gaba ya fi inganci. Mutane ne ke yanke hukunci a kowace kasuwa; AI dinmu ba ya kirkiro ko rufe kasuwa."
+    has("wallet", "walat") && has("hada", "haɗa", "connect", "link", "yaya", "how") ->
+        "Prognos Labs ba ta rike kudade. Kana hada walat dinka kuma kana rike makullanka. Ba ma ganin sirrin makullinka kuma ba ma rike kudinka."
+    has("ajiya", "saka kudi", "deposit") ->
+        "Ajiyar kudi tana amfani da USDT akan BSC, kai tsaye ta walat dinka. Kana sanya hannu daga walat dinka, kuma kudin naka ne."
+    has("kaddamarwa", "bude", "buɗe", "launch", "yaushe", "submission") ->
+        "Rijistar walat tana bude yanzu kuma za ta rufe ranar 1 ga Disemba, kafin kaddamarwa ga jama'a ranar 2 ga Disemba. Ciniki zai bude a ranar kaddamarwa."
+    has("kudin aiki", "fee", "fees", "yaya kuke samun kudi") ->
+        "Kowane ciniki a Prognos Labs yana da karamin kudin aiki, kuma ta haka muke samun kudi. Ba ma sayar da bayanan masu amfani."
+    has("maki", "point", "points", "referral", "gayyata") ->
+        "Prognos Labs tana da tsarin points, kuma kana samun points idan ka kawo mutane ta hanyar link dinka na referral. Points suna bin cinikinka da wadanda ka gayyata."
+    else -> null
+}
+
+VoiceLanguage.HEBREW -> when {
+    t.contains("prognos") && has("מה זה", "מהי", "תגיד לי", "ספר לי", "על") ->
+        "Prognos Labs היא פלטפורמת שווקי תחזיות עם תחזיות AI מובנות. לכל שוק יש תחזית קצרה בשפה פשוטה, וכשהשוק נסגר התחזית נמדדת מול התוצאה האמיתית כדי שהבאה תהיה חדה יותר. אנשים מכריעים כל שוק; ה-AI שלנו לעולם לא יוצר או מכריע שוק. המשתמשים שומרים את הארנק והמפתחות שלהם, ואנחנו לעולם לא מחזיקים בכספים."
+    has("תחזית", "תחזיות", "ai", "בינה") && has("איך", "מה") ->
+        "לכל שוק יש תחזית קצרה שמסבירה מה קורה ומה עשוי לקרות. כשהשוק נסגר על התוצאה האמיתית, התחזית מקבלת ציון מול התוצאה כדי שהתחזית הבאה תהיה מדויקת יותר. אנשים מכריעים כל שוק; ה-AI שלנו לעולם לא יוצר או מכריע שוק."
+    has("ארנק", "wallet") && has("לחבר", "חיבור", "לקשר", "איך") ->
+        "Prognos Labs היא לא משמורתית. אתה מחבר את הארנק שלך ושומר את המפתחות אצלך. אנחנו לעולם לא רואים את המפתח הפרטי שלך ולא מחזיקים בכספים שלך."
+    has("הפקדה", "להפקיד", "deposit") ->
+        "ההפקדות הן ב-USDT על רשת BSC, על השרשרת, דרך הארנק שלך. אתה חותם על ההפקדה מהארנק שלך והכספים נשארים שלך."
+    has("השקה", "מתי נפתח", "launch", "הרשמה") ->
+        "הגשת הארנקים פתוחה כעת ונסגרת ב-1 בדצמבר, לפני ההשקה הציבורית ב-2 בדצמבר. המסחר ייפתח עם ההשקה."
+    has("עמלה", "עמלות", "איך אתם מרוויחים", "fee") ->
+        "לכל עסקה ב-Prognos Labs יש עמלה קטנה, וכך אנחנו מרוויחים. אנחנו לא מוכרים נתוני משתמשים."
+    has("נקודות", "הפניה", "הפניות", "חבר מביא חבר", "point", "referral") ->
+        "ל-Prognos Labs יש מערכת נקודות, ואתה צובר נקודות על הבאת משתמשים דרך קישור ההפניה שלך. הנקודות עוקבות אחרי המסחר וההפניות שלך."
+    else -> null
+}
+
+VoiceLanguage.CHINESE -> when {
+    t.contains("prognos") && has("是什么", "介绍", "告诉我", "关于") ->
+        "Prognos Labs 是一个内置 AI 预测的预测市场平台。每个市场都附有简短直白的预测，市场结算后会对照真实结果评分，让下一次预测更精准。每个市场都由人决定，我们的 AI 从不创建或结算市场。用户自己保管钱包和私钥，我们从不托管资金。"
+    has("预测", "ai", "人工智能") && has("怎么", "如何", "什么") ->
+        "每个市场都带有简短预测，说明当前动态和可能走向。市场按真实结果结算后，系统会为预测评分以提升后续准确度。每个市场都由人决定，我们的 AI 从不创建或结算市场。"
+    has("钱包", "wallet") && has("连接", "绑定", "怎么", "如何") ->
+        "Prognos Labs 是非托管平台。你连接自己的钱包并保管自己的私钥，我们从不查看你的私钥，也不托管你的资金。"
+    has("充值", "存款", "入金", "deposit") ->
+        "充值通过你自己的钱包在 BSC 链上使用 USDT 完成。你在自己的钱包中签名，资金始终归你所有。"
+    has("上线", "发布", "开放", "提交", "launch") ->
+        "钱包提交现已开放，将于 12 月 1 日截止，随后于 12 月 2 日公开发布。交易将在发布时开放。"
+    has("手续费", "费用", "怎么赚钱", "盈利", "fee") ->
+        "Prognos Labs 的每笔交易收取少量手续费，这就是我们的盈利方式。我们不出售用户数据。"
+    has("积分", "推荐", "邀请", "返佣", "point", "referral") ->
+        "Prognos Labs 设有积分系统，你可以通过推荐链接邀请好友来赚取积分。积分与你的交易和推荐记录挂钩。"
+    else -> null
+}
         VoiceLanguage.ENGLISH -> null
     }
 }

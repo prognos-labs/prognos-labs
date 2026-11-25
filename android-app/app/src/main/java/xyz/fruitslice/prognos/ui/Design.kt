@@ -240,7 +240,7 @@ fun AuthTabs(options: List<String>, selected: Int, onSelect: (Int) -> Unit) {
                         if (sel) c.primary else Color.Transparent,
                         RoundedCornerShape(999.dp)
                     )
-                    .clickable { onSelect(i) },
+                    .clickable(interactionSource = remember(i) { MutableInteractionSource() }, indication = null) { onSelect(i) },
                 contentAlignment = Alignment.Center
             ) {
                 Text(

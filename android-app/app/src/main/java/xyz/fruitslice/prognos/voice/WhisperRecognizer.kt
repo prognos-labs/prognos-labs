@@ -8,56 +8,55 @@ import java.io.ByteArrayOutputStream
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.max
 import kotlin.math.sqrt
 import xyz.fruitslice.prognos.data.cleanRecognizedText
 import xyz.fruitslice.prognos.ui.VoiceEngine
 
 /**
- * The words pass through the on-device speech library (v1.1.13).
- * It records with the microphone, cuts the audio into a segment
- * when the user stops speaking, and transcribes each segment on a
- * background thread. v1.1.16: it is the ONLY recognizer. The
- * phone's built-in recognizer is gone, so a library failure is
- * reported as unavailable instead of falling back.
+ * On-device speech recognizer backed by whisper.cpp.
  *
- * The words pass and the voice-check capture never run at the same
- * time: the view model runs one, then the other. This class owns
- * its microphone only while it listens and releases it when it
- * stops.
- *
- * Words are shown as spoken: while the user is still talking, the
- * current segment is transcribed every couple of seconds and the
- * latest words go out as a Partial. The final transcription runs
- * when the user stops speaking, or when stop is called.
+ * Performance & noise-gating upgrades:
+ * - Uses VOICE_RECOGNITION audio source for OS noise suppression / AGC.
+ * - Calibrates an adaptive ambient noise floor over the first 250 ms and
+ *   requires sustained speech energy before opening a segment.
+ * - Eliminates mid-utterance partial Whisper runs (which previously caused
+ *   transcribeLock contention and 11-20s delays). Live RMS levels are emitted
+ *   instead, and Whisper runs once when speech ends.
+ * - Attaches the captured 16 kHz mono PCM to [VoiceEngine.Event.Final] so the
+ *   voice-check pass can verify words and speaker features in a single pass.
  */
 class WhisperRecognizer(
     private val modelManager: WhisperModelManager,
-    private val languageCode: () -> String = { "en" }
+    private val languageCode: () -> String = { "en" },
+    private val initialPrompt: () -> String? = { null }
 ) {
     companion object {
         const val SAMPLE_RATE = 16_000
 
-        /** RMS below this counts as silence (16-bit samples). */
+        /** Minimum RMS floor for speech detection (16-bit PCM). */
         const val SILENCE_RMS = 400.0
 
-        /** Silence this long after speech ends the segment. */
-        const val SILENCE_TO_FINAL_MS = 1_200L
+        /** Silence this long after speech ends finalizes the segment. */
+        const val SILENCE_TO_FINAL_MS = 750L
 
-        /** Words shown live at most this often while speaking. */
-        const val PARTIAL_EVERY_MS = 2_000L
-
-        /** A segment never runs longer than this. */
+        /** Hard cap on a single utterance segment. */
         const val MAX_SEGMENT_SECONDS = 30
 
-        /** The speech-library language code for a device locale:
-         * the two-letter code when this build supports it, English
-         * otherwise. The library is multilingual, so all seven
-         * voice languages use their own code. */
+        /** Ambient noise calibration window at start of listen. */
+        const val CALIBRATION_MS = 250L
+
+        /** Multiplier above calibrated noise floor to count as speech. */
+        const val NOISE_FLOOR_MULTIPLIER = 1.8
+
+        /** Consecutive active frames required to confirm speech onset. */
+        const val ONSET_FRAMES_REQUIRED = 2
+
+        /** Supported on-device Whisper language codes. */
         fun whisperLanguageCode(locale: Locale): String {
             val code = locale.language.lowercase(Locale.US)
-            return if (code in setOf("en", "es", "fr", "pt", "de", "tr", "ar")) code else "en"
+            return if (code in setOf("en", "es", "fr", "pt", "de", "tr", "ar", "zh")) code else "en"
         }
 
         /** Root mean square of a slice of 16-bit audio. */
@@ -73,11 +72,11 @@ class WhisperRecognizer(
 
         fun isSilent(rms: Double): Boolean = rms < SILENCE_RMS
 
-        /**
-         * True when the current segment should be transcribed and
-         * closed: speech was heard and silence has run long
-         * enough, or the segment hit the length cap.
-         */
+        fun isSilentAdaptive(rms: Double, noiseFloorRms: Double): Boolean {
+            val threshold = max(SILENCE_RMS, noiseFloorRms * NOISE_FLOOR_MULTIPLIER)
+            return rms < threshold
+        }
+
         fun shouldFinalize(
             speechHeard: Boolean,
             silenceMs: Long,
@@ -88,44 +87,21 @@ class WhisperRecognizer(
     }
 
     private var recordExecutor: ExecutorService? = null
-    private var transcribeExecutor: ExecutorService? = null
     private var record: AudioRecord? = null
     private val recording = AtomicBoolean(false)
-    private val transcribing = AtomicBoolean(false)
     private val released = AtomicBoolean(false)
     private var nativeContext: Long = 0
     private val transcribeLock = Any()
     private var onEvent: ((VoiceEngine.Event) -> Unit)? = null
 
-    /** True when this recognizer can run right now: the model file
-     * is verified and the native library loaded. */
     fun ready(): Boolean = modelManager.isModelReady() && WhisperNative.isAvailable
 
-    /**
-     * True when the voice can be made ready: the model file is
-     * already verified, or a bundled copy is in the APK waiting to
-     * be copied out. The first tap copies it, so a missing file is
-     * not "unavailable". The native library is the only thing that
-     * can stop it, and that is found when listening starts.
-     */
     fun isAvailable(): Boolean =
         modelManager.isModelReady() || modelManager.hasBundledModel()
 
-    /**
-     * Makes the model ready: copies the bundled copy into the
-     * app's files and checks it by size and hash, then confirms
-     * the native library loaded. False when any of that fails.
-     */
     suspend fun ensureModel(): Boolean =
         modelManager.ensureModel() && WhisperNative.isAvailable
 
-    /**
-     * Starts listening. Emits Partial while the user speaks and one
-     * Final when they stop, or Error / Unavailable when it cannot
-     * run. The engine makes the model ready first; this is the
-     * safety net for a recognizer that was never prepared. Ends
-     * any previous pass first.
-     */
     fun start(onEvent: (VoiceEngine.Event) -> Unit) {
         this.onEvent = onEvent
         released.set(false)
@@ -134,6 +110,7 @@ class WhisperRecognizer(
             return
         }
         stop()
+
         val minBuf = AudioRecord.getMinBufferSize(
             SAMPLE_RATE,
             AudioFormat.CHANNEL_IN_MONO,
@@ -143,9 +120,10 @@ class WhisperRecognizer(
             onEvent(VoiceEngine.Event.Unavailable)
             return
         }
+
         val rec = try {
             AudioRecord(
-                MediaRecorder.AudioSource.MIC,
+                MediaRecorder.AudioSource.VOICE_RECOGNITION,
                 SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT,
@@ -154,6 +132,7 @@ class WhisperRecognizer(
         } catch (e: Exception) {
             null
         }
+
         if (rec == null || rec.state != AudioRecord.STATE_INITIALIZED) {
             try {
                 rec?.release()
@@ -163,6 +142,7 @@ class WhisperRecognizer(
             onEvent(VoiceEngine.Event.Unavailable)
             return
         }
+
         record = rec
         try {
             rec.startRecording()
@@ -172,15 +152,11 @@ class WhisperRecognizer(
             onEvent(VoiceEngine.Event.Unavailable)
             return
         }
+
         recording.set(true)
         recordExecutor().execute { runLoop(rec) }
     }
 
-    /**
-     * Ends the listen; the recorded audio is still transcribed and
-     * reported. Returns at once; the result arrives on the event
-     * callback.
-     */
     fun stop() {
         if (!recording.get()) return
         recording.set(false)
@@ -191,8 +167,6 @@ class WhisperRecognizer(
         }
     }
 
-    /** Stops everything and frees the native model. No event is
-     * delivered after this call. */
     fun release() {
         released.set(true)
         recording.set(false)
@@ -208,9 +182,7 @@ class WhisperRecognizer(
         }
         record = null
         recordExecutor?.shutdownNow()
-        transcribeExecutor?.shutdownNow()
         recordExecutor = null
-        transcribeExecutor = null
         synchronized(transcribeLock) {
             if (nativeContext != 0L) {
                 try {
@@ -218,7 +190,7 @@ class WhisperRecognizer(
                 } catch (e: Throwable) {
                     // Already freed.
                 }
-                nativeContext = 0
+                nativeContext = 0L
             }
         }
     }
@@ -232,23 +204,18 @@ class WhisperRecognizer(
         return ex
     }
 
-    private fun transcribeExecutor(): ExecutorService {
-        var ex = transcribeExecutor
-        if (ex == null || ex.isShutdown) {
-            ex = Executors.newSingleThreadExecutor()
-            transcribeExecutor = ex
-        }
-        return ex
-    }
-
     private fun runLoop(rec: AudioRecord) {
         val segment = ByteArrayOutputStream()
         var speechHeard = false
+        var onsetStreak = 0
         var lastSpeechMs = 0L
-        var lastPartialMs = 0L
-        var lastPartialText = ""
+        var noiseFloorSum = 0.0
+        var noiseFloorFrames = 0
+        var noiseFloorRms = SILENCE_RMS / NOISE_FLOOR_MULTIPLIER
+
         val startedMs = SystemClock.uptimeMillis()
         val buf = ByteArray(4096)
+
         while (recording.get()) {
             val read = try {
                 rec.read(buf, 0, buf.size)
@@ -256,77 +223,89 @@ class WhisperRecognizer(
                 break
             }
             if (read <= 0) break
+
             val now = SystemClock.uptimeMillis()
+            val elapsedMs = now - startedMs
             val shorts = bytesToShorts(buf, read)
-            if (!isSilent(rmsOf(shorts))) {
-                speechHeard = true
-                lastSpeechMs = now
+            val rms = rmsOf(shorts)
+
+            // Emit normalized amplitude (0f..1f) for live waveform animation.
+            val normLevel = (rms / 4000.0).toFloat().coerceIn(0f, 1f)
+            if (!released.get()) {
+                onEvent?.invoke(VoiceEngine.Event.Level(normLevel))
             }
-            segment.write(buf, 0, read)
-            val segmentMs = now - startedMs
-            val silenceMs = if (speechHeard) now - lastSpeechMs else 0L
-            if (shouldFinalize(speechHeard, silenceMs, segmentMs)) break
-            if (speechHeard && now - lastPartialMs >= PARTIAL_EVERY_MS &&
-                transcribing.compareAndSet(false, true)
-            ) {
-                val snapshot = segment.toByteArray()
-                transcribeExecutor().execute {
-                    try {
-                        val text = transcribeBytes(snapshot)?.let { cleanRecognizedText(it) }
-                        if (!released.get() && text != null && text.isNotBlank() &&
-                            text != lastPartialText
-                        ) {
-                            lastPartialText = text
-                            onEvent?.invoke(VoiceEngine.Event.Partial(text))
-                        }
-                    } finally {
-                        transcribing.set(false)
-                    }
+
+            if (elapsedMs < CALIBRATION_MS && !speechHeard) {
+                noiseFloorSum += rms
+                noiseFloorFrames++
+                noiseFloorRms = (noiseFloorSum / noiseFloorFrames).coerceIn(150.0, 1200.0)
+                continue
+            }
+
+            if (!isSilentAdaptive(rms, noiseFloorRms)) {
+                onsetStreak++
+                if (onsetStreak >= ONSET_FRAMES_REQUIRED) {
+                    speechHeard = true
+                    lastSpeechMs = now
                 }
-                lastPartialMs = now
+            } else {
+                onsetStreak = 0
             }
+
+            if (speechHeard) {
+                segment.write(buf, 0, read)
+            }
+
+            val silenceMs = if (speechHeard) now - lastSpeechMs else 0L
+            if (shouldFinalize(speechHeard, silenceMs, elapsedMs)) break
         }
+
         try {
             rec.stop()
         } catch (e: Exception) {
             // Already stopped.
         }
+        try {
+            rec.release()
+        } catch (e: Exception) {
+            // Already released.
+        }
+        if (record === rec) record = null
+
         if (released.get()) return
+
         val bytes = segment.toByteArray()
         if (!speechHeard || bytes.isEmpty()) {
             onEvent?.invoke(VoiceEngine.Event.Error("I did not catch that. Say it again.", silent = true))
             return
         }
-        // The model could not be loaded at all: that is voice
-        // unavailable, not a missed sentence. There is no fallback
-        // recognizer any more, so say so plainly.
+
         if (nativeContext() == 0L) {
             onEvent?.invoke(VoiceEngine.Event.Unavailable)
             return
         }
-        val text = transcribeBytes(bytes)?.let { cleanRecognizedText(it) }
+
+        val pcm = bytesToShorts(bytes, bytes.size)
+        val text = transcribePcm(pcm)?.let { cleanRecognizedText(it) }
         if (text.isNullOrBlank()) {
             onEvent?.invoke(VoiceEngine.Event.Error("I did not catch that. Say it again.", silent = true))
         } else {
-            onEvent?.invoke(VoiceEngine.Event.Final(text, listOf(text)))
+            onEvent?.invoke(VoiceEngine.Event.Final(text, listOf(text), pcm))
         }
     }
 
-    /** Transcribes one audio segment. Null when the model could
-     * not be loaded or the run failed. One run at a time: the
-     * native context is not safe to share between threads. */
-    private fun transcribeBytes(bytes: ByteArray): String? {
-        val pcm = bytesToShorts(bytes, bytes.size)
+    private fun transcribePcm(pcm: ShortArray): String? {
         if (pcm.isEmpty()) return null
         val ctx = nativeContext()
         if (ctx == 0L) return null
         synchronized(transcribeLock) {
             return try {
                 WhisperNative.nativeTranscribe(
-                    ctx,
-                    pcm,
-                    languageCode(),
-                    Runtime.getRuntime().availableProcessors().coerceIn(1, 4)
+                    context = ctx,
+                    pcm = pcm,
+                    language = languageCode(),
+                    threads = Runtime.getRuntime().availableProcessors().coerceIn(1, 4),
+                    initialPrompt = initialPrompt()
                 )
             } catch (e: Throwable) {
                 null
@@ -334,8 +313,6 @@ class WhisperRecognizer(
         }
     }
 
-    /** Loads the model into the native library on first use and
-     * keeps the handle until release. */
     private fun nativeContext(): Long {
         var ctx = nativeContext
         if (ctx != 0L) return ctx
@@ -363,3 +340,4 @@ class WhisperRecognizer(
         return out
     }
 }
+

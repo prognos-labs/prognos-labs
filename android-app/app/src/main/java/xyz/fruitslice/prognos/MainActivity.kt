@@ -1,6 +1,7 @@
 package xyz.fruitslice.prognos
 
 import android.Manifest
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -150,7 +151,7 @@ private fun PrognosBottomBar(tabs: List<Tab>, selected: String, onSelect: (Strin
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .clickable { onSelect(t.route) },
+                    .clickable(interactionSource = remember(t.route) { MutableInteractionSource() }, indication = null) { onSelect(t.route) },
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Icon(

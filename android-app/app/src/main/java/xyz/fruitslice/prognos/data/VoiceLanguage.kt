@@ -19,14 +19,23 @@ import java.util.Locale
  * the box has no mic.
  */
 
-enum class VoiceLanguage(val code: String, val displayName: String) {
+enum class VoiceLanguage(
+    val code: String,
+    val displayName: String,
+    val requiresCloudAsr: Boolean = false
+) {
     ENGLISH("en", "English"),
     SPANISH("es", "Spanish"),
     FRENCH("fr", "French"),
     PORTUGUESE("pt", "Portuguese"),
     GERMAN("de", "German"),
     TURKISH("tr", "Turkish"),
-    ARABIC("ar", "Arabic")
+    ARABIC("ar", "Arabic"),
+    IGBO("ig", "Igbo", requiresCloudAsr = true),
+    YORUBA("yo", "Yoruba", requiresCloudAsr = true),
+    HAUSA("ha", "Hausa", requiresCloudAsr = true),
+    HEBREW("he", "Hebrew", requiresCloudAsr = true),
+    CHINESE("zh", "Chinese", requiresCloudAsr = false)
 }
 
 val SUPPORTED_VOICE_LANGUAGES: List<VoiceLanguage> = VoiceLanguage.entries.toList()
@@ -41,19 +50,35 @@ fun voiceLanguageForLocale(locale: Locale): VoiceLanguage =
         "de" -> VoiceLanguage.GERMAN
         "tr" -> VoiceLanguage.TURKISH
         "ar" -> VoiceLanguage.ARABIC
+        "ig" -> VoiceLanguage.IGBO
+        "yo" -> VoiceLanguage.YORUBA
+        "ha" -> VoiceLanguage.HAUSA
+        "he", "iw" -> VoiceLanguage.HEBREW
+        "zh" -> VoiceLanguage.CHINESE
         else -> VoiceLanguage.ENGLISH
     }
+
 
 /** True when the device language is one this build supports for
  * voice. Anything else falls back to English. */
 fun voiceLanguageSupported(locale: Locale): Boolean =
     locale.language.lowercase(Locale.US) in
-        setOf("en", "es", "fr", "pt", "de", "tr", "ar")
+        setOf("en", "es", "fr", "pt", "de", "tr", "ar", "ig", "yo", "ha", "he", "iw", "zh")
+
 
 /** Plain note for a phone whose language is not supported yet.
  * Voice listens in English, and the tap buttons still work. */
 const val UNSUPPORTED_LANGUAGE_NOTE =
     "Your phone language is not supported for voice yet, so voice listens in English. The tap buttons still work."
+
+const val IGBO_FALLBACK_NOTE =
+    "Igbo voice recognition is not available on-device yet, so voice listens in English for now."
+
+fun whisperCodeFor(language: VoiceLanguage): String = when (language) {
+    VoiceLanguage.HEBREW -> "iw"
+    VoiceLanguage.IGBO -> "en" // whisper.cpp has no Igbo; falls back to English
+    else -> language.code
+}
 
 /**
  * Everything the parser and the answers need for one language.
@@ -121,7 +146,13 @@ fun vocabFor(language: VoiceLanguage): LanguageVocab = when (language) {
     VoiceLanguage.GERMAN -> GERMAN_VOCAB
     VoiceLanguage.TURKISH -> TURKISH_VOCAB
     VoiceLanguage.ARABIC -> ARABIC_VOCAB
+    VoiceLanguage.IGBO -> IGBO_VOCAB
+    VoiceLanguage.YORUBA -> YORUBA_VOCAB
+    VoiceLanguage.HAUSA -> HAUSA_VOCAB
+    VoiceLanguage.HEBREW -> HEBREW_VOCAB
+    VoiceLanguage.CHINESE -> CHINESE_VOCAB
 }
+
 
 /** Fills {placeholders} in a template. Unknown placeholders are
  * left as they are, so a missing value never breaks the sentence. */
@@ -249,7 +280,9 @@ val ENGLISH_VOCAB = LanguageVocab(
         Regex("\\byeah\\b", RegexOption.IGNORE_CASE) to "yes",
         Regex("\\byep\\b", RegexOption.IGNORE_CASE) to "yes",
         Regex("\\byup\\b", RegexOption.IGNORE_CASE) to "yes",
-        Regex("\\bnope\\b", RegexOption.IGNORE_CASE) to "no"
+        Regex("\\bnope\\b", RegexOption.IGNORE_CASE) to "no",
+        Regex("\\bbeach\\s+coins?\\b", RegexOption.IGNORE_CASE) to "bitcoin",
+        Regex("\\bpizza\\s+going\\b", RegexOption.IGNORE_CASE) to "bitcoin"
     )
 )
 
@@ -1009,6 +1042,377 @@ val ARABIC_VOCAB = LanguageVocab(
     ),
     challengeInstructionFirst = "قل \"{phrase}\" حتى يتأكد التطبيق أنك أنت.",
     challengeInstructionAgain = "قل \"{phrase}\" مرة أخرى حتى يتأكد التطبيق من صوتك.",
+    mishearings = listOf(
+        Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
+        Regex("\\bprogno" + "sis\\b", RegexOption.IGNORE_CASE) to "prognos"
+    )
+)
+
+val IGBO_VOCAB = LanguageVocab(
+    language = VoiceLanguage.IGBO,
+    yesWords = setOf("ee", "e", "ewo", "ọ dị mma", "o di mma", "yes", "ok", "okay", "kwado", "mee ya"),
+    noWords = setOf("mba", "no", "ọ bụghị ya", "o bughi ya", "ezighi ezi"),
+    cancelWords = setOf("kagbuo", "kwụsị", "kwusi", "cancel", "stop", "hapụ ya", "hapu ya"),
+    buyVerbs = setOf("zụta", "zuta", "zụọ", "zuo", "buy", "gba"),
+    sellVerbs = setOf("ree", "re", "sell"),
+    upWords = setOf("ee", "elu", "yes", "up", "rịa", "ria"),
+    downWords = setOf("mba", "ala", "no", "down", "daa"),
+    helloPhrases = setOf("ndewo", "kedu", "ụtụtụ ọma", "ututu oma", "ehihie ọma", "mgbede ọma", "hello", "hi"),
+    howAreYouPhrases = setOf("kedu ka ị mere", "kedu ka i mere", "ị dị mma", "i di mma"),
+    checkInPhrases = setOf("ị na-anụ m", "i na-anu m", "ị nọ ebe a", "i no ebe a"),
+    questionStarters = setOf("kedu", "gịnị", "gini", "olee", "mgbe", "gwa m", "gosi m"),
+    priceWords = setOf("ọnụ ahịa", "onu ahia", "ego ole", "price"),
+    liquidWords = setOf("ahịa kacha", "ahia kacha", "liquidity", "volume"),
+    newsWords = setOf("akụkọ", "akuko", "ozi", "news"),
+    balanceWords = setOf("ego m", "balance", "akaụntụ m", "akauntu m"),
+    marketWords = setOf("ahịa", "ahia", "market"),
+    tradingOpenWords = setOf("mgbe ahịa ga-emeghe", "when does trading open"),
+    navVerbs = setOf("meghee", "gosi", "gaa", "open", "show"),
+    navTargets = mapOf(
+        "ahịa" to "markets", "ahia" to "markets", "markets" to "markets",
+        "ụlọ" to "dashboard", "ulo" to "dashboard", "dashboard" to "dashboard",
+        "portfolio" to "portfolio", "wallet" to "wallet", "akpa ego" to "wallet",
+        "settings" to "settings", "notifications" to "notifications", "ego m" to "dashboard"
+    ),
+    numberWords = mapOf(
+        "efu" to 0.0, "otu" to 1.0, "abụọ" to 2.0, "abuo" to 2.0, "atọ" to 3.0, "ato" to 3.0,
+        "anọ" to 4.0, "ano" to 4.0, "ise" to 5.0, "isii" to 6.0, "asaa" to 7.0, "asatọ" to 8.0, "asato" to 8.0,
+        "itoolu" to 9.0, "iri" to 10.0, "iri abụọ" to 20.0, "iri abuo" to 20.0,
+        "iri atọ" to 30.0, "iri ato" to 30.0, "iri anọ" to 40.0, "iri ano" to 40.0,
+        "iri ise" to 50.0, "narị" to 100.0, "nari" to 100.0, "puku" to 1000.0
+    ),
+    truncatedTailWords = setOf("kedu", "gịnị", "gini", "olee", "mgbe", "na", "ka", "maka", "nke"),
+    greetingAnswer = "Ndewo. Gịnị ka ị chọrọ ime?",
+    howAreYouAnswer = "Adị m mma. Gịnị ka ị chọrọ ime?",
+    checkInAnswer = "Ee, ana m anụ gị. Gịnị ka ị chọrọ ime?",
+    outOfScopeAnswer = "Ana m enyere aka naanị maka ahịa na Prognos Labs.",
+    askAmount = "Aghọtaghị m ego ole. Kwuo ya ọzọ, dịka zụta 50 Yes.",
+    askAmountFraction = "Ego ole na dollar? Kwuo ya, dịka ree 50 No.",
+    askMarket = "Kedu ahịa? Kwuo aha coin ahụ, dịka Bitcoin.",
+    askPrice = "Ọnụ ahịa kedu coin? Kwuo aha ya, dịka Bitcoin.",
+    askNews = "Akụkọ maka kedu coin? Kwuo aha ya, dịka Bitcoin.",
+    answerPrice = "{label} bụ {price}.",
+    answerLiquid = "Ahịa kacha nwee ego na Prognos Labs ugbu a bụ {market}, nwere {volume} na awa 24.",
+    answerNews = "Akụkọ ọhụrụ maka {label}: {title}{source}.{more}",
+    answerBalance = "Ego gị bụ {balance}.",
+    answerMarket = "{question} Yes bụ {yes}, No bụ {no}.",
+    answerTradingOpen = "Ahịa emeghebeghị.",
+    answerHowToTrade = "Họrọ ahịa, họrọ Buy Up ma ọ bụ Sell Down, tinye ego ma kwado ya.",
+    answerNoPrice = "Enweghị m ọnụ ahịa {label} ugbu a.",
+    answerNoBalance = "Ego gị adịghị ugbu a.",
+    answerNoMarkets = "Ahịa adịghị ugbu a.",
+    answerNoVolume = "Enweghị m data volume ugbu a.",
+    answerNoNews = "Enweghị akụkọ maka {label} ugbu a.{extra}",
+    answerNoMarket = "Achọtaghị m ahịa ahụ ugbu a.",
+    enrollPhrases = listOf(
+        "Zụta iri ise Yes na Bitcoin",
+        "Ree iri abụọ No na Ethereum",
+        "Ego ole ka m nwere"
+    ),
+    challengePhrases = listOf(
+        "mmiri ọcha", "anyanwụ ụtụtụ", "osimiri ukwu", "ugwu ọlaedo",
+        "ikuku dị jụụ", "kpakpando na-enwu", "ahịa ọma", "ụzọ ọhụrụ"
+    ),
+    challengeInstructionFirst = "Kwuo \"{phrase}\" ka ngwa ahụ chọpụta na ọ bụ gị.",
+    challengeInstructionAgain = "Kwuo \"{phrase}\" ọzọ ka ngwa ahụ lelee olu gị.",
+    mishearings = listOf(
+        Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
+        Regex("\\bbeach\\s+coins?\\b", RegexOption.IGNORE_CASE) to "bitcoin",
+        Regex("\\bprogno" + "sis\\b", RegexOption.IGNORE_CASE) to "prognos"
+    )
+)
+
+val YORUBA_VOCAB = LanguageVocab(
+    language = VoiceLanguage.YORUBA,
+    yesWords = setOf("bẹẹni", "beeni", "bẹ́ẹ̀ni", "yes", "ok", "okay", "o dara", "ṣe é", "se e", "jẹrisi", "jerisi"),
+    noWords = setOf("rara", "rárá", "no", "kì í ṣe", "ki i se", "o ti"),
+    cancelWords = setOf("fagilee", "duro", "cancel", "stop", "fi silẹ", "fi sile"),
+    buyVerbs = setOf("ra", "rà", "fẹ ra", "fe ra", "buy"),
+    sellVerbs = setOf("ta", "tà", "fẹ ta", "fe ta", "sell"),
+    upWords = setOf("bẹẹni", "beeni", "oke", "òkè", "yes", "up"),
+    downWords = setOf("rara", "isale", "ìsàlẹ̀", "no", "down"),
+    helloPhrases = setOf("bawo", "báwo", "ẹ n lẹ", "e n le", "ẹ kaarọ", "e kaaro", "ẹ kasan", "e kasan", "hello", "hi"),
+    howAreYouPhrases = setOf("bawo ni", "báwo ni", "ṣe alaafia ni", "se alaafia ni"),
+    checkInPhrases = setOf("ṣe o n gbọ mi", "se o n gbo mi", "ṣe o wa nibẹ", "se o wa nibe"),
+    questionStarters = setOf("kini", "kí ni", "bawo", "nigbawo", "elo", "sọ fun mi", "so fun mi", "fi han mi"),
+    priceWords = setOf("iye", "owo", "elo ni", "price"),
+    liquidWords = setOf("ọja ti o pọ julọ", "oja ti o po julo", "liquidity", "volume"),
+    newsWords = setOf("iroyin", "ìròyìn", "news"),
+    balanceWords = setOf("owo mi", "balance", "akọọlẹ mi", "akoole mi"),
+    marketWords = setOf("ọja", "oja", "market"),
+    tradingOpenWords = setOf("nigbawo ni ọja yoo ṣii", "when does trading open"),
+    navVerbs = setOf("ṣi", "si", "fi han", "lọ si", "lo si", "open", "show"),
+    navTargets = mapOf(
+        "ọja" to "markets", "oja" to "markets", "markets" to "markets",
+        "ile" to "dashboard", "dashboard" to "dashboard",
+        "portfolio" to "portfolio", "wallet" to "wallet", "apamọwọ" to "wallet",
+        "settings" to "settings", "notifications" to "notifications", "owo mi" to "dashboard"
+    ),
+    numberWords = mapOf(
+        "odo" to 0.0, "ọkan" to 1.0, "okan" to 1.0, "meji" to 2.0, "mẹta" to 3.0, "meta" to 3.0,
+        "mẹrin" to 4.0, "merin" to 4.0, "marun" to 5.0, "mẹfa" to 6.0, "mefa" to 6.0,
+        "meje" to 7.0, "mẹjọ" to 8.0, "mejo" to 8.0, "mẹsan" to 9.0, "mesan" to 9.0,
+        "mẹwa" to 10.0, "mewa" to 10.0, "ogun" to 20.0, "ọgbọn" to 30.0, "ogbon" to 30.0,
+        "ogoji" to 40.0, "aadọta" to 50.0, "aadota" to 50.0, "ọgọrun" to 100.0, "ogorun" to 100.0,
+        "ẹgbẹrun" to 1000.0, "egberun" to 1000.0
+    ),
+    truncatedTailWords = setOf("kini", "bawo", "elo", "ni", "ti", "fun", "si", "ati"),
+    greetingAnswer = "Pẹlẹ o. Kini o fẹ ṣe?",
+    howAreYouAnswer = "Mo wa daadaa. Kini o fẹ ṣe?",
+    checkInAnswer = "Bẹẹni, mo n gbọ ọ. Kini o fẹ ṣe?",
+    outOfScopeAnswer = "Mo n ranṣẹ lori iṣowo Prognos Labs nikan.",
+    askAmount = "Mi o gbọ iye owo naa. Sọ ọ lẹẹkan si, bii ra 50 Yes.",
+    askAmountFraction = "Elo ni dọla? Sọ iye naa, bii ta 50 No.",
+    askMarket = "Ọja wo? Sọ orukọ coin naa, bii Bitcoin.",
+    askPrice = "Iye coin wo? Sọ orukọ rẹ, bii Bitcoin.",
+    askNews = "Iroyin nipa coin wo? Sọ orukọ rẹ, bii Bitcoin.",
+    answerPrice = "{label} jẹ {price}.",
+    answerLiquid = "Ọja ti o ni owo julọ lori Prognos Labs bayii ni {market}, pẹlu {volume} ni wakati 24.",
+    answerNews = "Iroyin tuntun nipa {label}: {title}{source}.{more}",
+    answerBalance = "Owo rẹ jẹ {balance}.",
+    answerMarket = "{question} Yes jẹ {yes}, No jẹ {no}.",
+    answerTradingOpen = "Iṣowo ko tii ṣii.",
+    answerHowToTrade = "Yan ọja kan, yan Buy Up tabi Sell Down, tẹ iye owo sii ki o jẹrisi.",
+    answerNoPrice = "Mi o ni iye {label} bayii.",
+    answerNoBalance = "Owo rẹ ko si ni bayi.",
+    answerNoMarkets = "Awọn ọja ko tii gbe jade bayii.",
+    answerNoVolume = "Mi o ni data volume bayii.",
+    answerNoNews = "Ko si iroyin nipa {label} bayii.{extra}",
+    answerNoMarket = "Mi o ri ọja yẹn bayii.",
+    enrollPhrases = listOf(
+        "Ra aadọta Yes lori Bitcoin",
+        "Ta ogun No lori Ethereum",
+        "Elo ni owo mi"
+    ),
+    challengePhrases = listOf(
+        "omi tutu", "oorun owurọ", "odo nla", "irawọ didan",
+        "afẹfẹ rọrun", "ọja rere", "ọna tuntun", "oṣupa funfun"
+    ),
+    challengeInstructionFirst = "Sọ \"{phrase}\" ki app naa le mọ pe iwọ ni.",
+    challengeInstructionAgain = "Sọ \"{phrase}\" lẹẹkan si ki app naa le ṣayẹwo ohun rẹ.",
+    mishearings = listOf(
+        Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
+        Regex("\\bbeach\\s+coins?\\b", RegexOption.IGNORE_CASE) to "bitcoin",
+        Regex("\\bprogno" + "sis\\b", RegexOption.IGNORE_CASE) to "prognos"
+    )
+)
+
+val HAUSA_VOCAB = LanguageVocab(
+    language = VoiceLanguage.HAUSA,
+    yesWords = setOf("eh", "i", "haka ne", "daidai", "tabbas", "yes", "ok", "okay", "tabbatar"),
+    noWords = setOf("a'a", "aa", "babu", "no", "ba haka ba"),
+    cancelWords = setOf("soke", "dakata", "cancel", "stop", "bar shi"),
+    buyVerbs = setOf("saya", "sayi", "sayo", "ina son saya", "buy"),
+    sellVerbs = setOf("sayar", "sai da", "ina son sayar", "sell"),
+    upWords = setOf("eh", "sama", "hawa", "yes", "up"),
+    downWords = setOf("a'a", "kasa", "ƙasa", "faduwa", "no", "down"),
+    helloPhrases = setOf("sannu", "barka", "ina kwana", "ina wuni", "hello", "hi"),
+    howAreYouPhrases = setOf("yaya kake", "yaya kike", "kana lafiya", "kina lafiya"),
+    checkInPhrases = setOf("kana ji na", "kina ji na", "kana nan"),
+    questionStarters = setOf("menene", "me", "yaya", "yaushe", "nawa", "fada min", "nuna min"),
+    priceWords = setOf("farashi", "nawa ne", "kudi", "price"),
+    liquidWords = setOf("kasuwa mafi girma", "liquidity", "volume"),
+    newsWords = setOf("labarai", "labari", "news"),
+    balanceWords = setOf("kudina", "kuɗina", "balance", "asusuna"),
+    marketWords = setOf("kasuwa", "kasuwanni", "market"),
+    tradingOpenWords = setOf("yaushe kasuwa za ta bude", "when does trading open"),
+    navVerbs = setOf("bude", "buɗe", "nuna", "je", "open", "show"),
+    navTargets = mapOf(
+        "kasuwa" to "markets", "markets" to "markets",
+        "gida" to "dashboard", "dashboard" to "dashboard",
+        "portfolio" to "portfolio", "wallet" to "wallet", "walat" to "wallet",
+        "settings" to "settings", "notifications" to "notifications", "kudina" to "dashboard"
+    ),
+    numberWords = mapOf(
+        "sifili" to 0.0, "daya" to 1.0, "ɗaya" to 1.0, "biyu" to 2.0, "uku" to 3.0,
+        "hudu" to 4.0, "huɗu" to 4.0, "biyar" to 5.0, "shida" to 6.0, "bakwai" to 7.0,
+        "takwas" to 8.0, "tara" to 9.0, "goma" to 10.0, "ashirin" to 20.0, "talatin" to 30.0,
+        "arba'in" to 40.0, "arbain" to 40.0, "hamsin" to 50.0, "sittin" to 60.0,
+        "saba'in" to 70.0, "tamanin" to 80.0, "tisa'in" to 90.0, "dari" to 100.0, "ɗari" to 100.0,
+        "dubu" to 1000.0
+    ),
+    truncatedTailWords = setOf("menene", "me", "yaya", "yaushe", "nawa", "na", "da", "a", "ga"),
+    greetingAnswer = "Sannu. Me kake son yi?",
+    howAreYouAnswer = "Lafiya lau. Me kake son yi?",
+    checkInAnswer = "Eh, ina jin ka. Me kake son yi?",
+    outOfScopeAnswer = "Ina taimakawa ne kawai kan ciniki a Prognos Labs.",
+    askAmount = "Ban ji adadin kudin ba. Sake fada, misali saya 50 Yes.",
+    askAmountFraction = "Nawa a dala? Fadi adadin, misali sayar 50 No.",
+    askMarket = "Wace kasuwa? Fadi sunan coin, misali Bitcoin.",
+    askPrice = "Farashin wane coin? Fadi sunansa, misali Bitcoin.",
+    askNews = "Labarai game da wane coin? Fadi sunansa, misali Bitcoin.",
+    answerPrice = "{label} yana {price}.",
+    answerLiquid = "Kasuwa mafi girma a Prognos Labs yanzu ita ce {market}, da {volume} cikin awanni 24.",
+    answerNews = "Sabbin labarai kan {label}: {title}{source}.{more}",
+    answerBalance = "Kudinka shine {balance}.",
+    answerMarket = "{question} Yes yana {yes}, No yana {no}.",
+    answerTradingOpen = "Ba a bude ciniki ba tukuna.",
+    answerHowToTrade = "Zabi kasuwa, zabi Buy Up ko Sell Down, shigar da adadi sannan ka tabbatar.",
+    answerNoPrice = "Bani da farashin {label} a yanzu.",
+    answerNoBalance = "Ba a iya samun adadin kudinka a yanzu ba.",
+    answerNoMarkets = "Ba a loda kasuwanni ba tukuna.",
+    answerNoVolume = "Babu bayanan volume a yanzu.",
+    answerNoNews = "Babu labarai kan {label} a yanzu.{extra}",
+    answerNoMarket = "Ban sami wannan kasuwa ba a yanzu.",
+    enrollPhrases = listOf(
+        "Saya hamsin Yes a Bitcoin",
+        "Sayar ashirin No a Ethereum",
+        "Nawa ne kudina"
+    ),
+    challengePhrases = listOf(
+        "ruwa mai sanyi", "hasken safe", "babban kogi", "tauraro mai haske",
+        "iska mai dadi", "kasuwa mai kyau", "sabon hanya", "wata mai haske"
+    ),
+    challengeInstructionFirst = "Fadi \"{phrase}\" domin app din ya tabbatar kai ne.",
+    challengeInstructionAgain = "Sake fadin \"{phrase}\" domin app din ya duba muryarka.",
+    mishearings = listOf(
+        Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
+        Regex("\\bbeach\\s+coins?\\b", RegexOption.IGNORE_CASE) to "bitcoin",
+        Regex("\\bprogno" + "sis\\b", RegexOption.IGNORE_CASE) to "prognos"
+    )
+)
+
+val HEBREW_VOCAB = LanguageVocab(
+    language = VoiceLanguage.HEBREW,
+    yesWords = setOf("כן", "נכון", "בסדר", "מאשר", "תאשר", "בטח", "יאללה", "yes", "ok"),
+    noWords = setOf("לא", "ממש לא", "טעות", "לא נכון", "no"),
+    cancelWords = setOf("בטל", "ביטול", "עצור", "תבטל", "cancel", "stop"),
+    buyVerbs = setOf("קנה", "לקנות", "תקנה", "אני רוצה לקנות", "buy"),
+    sellVerbs = setOf("מכור", "למכור", "תמכור", "אני רוצה למכור", "sell"),
+    upWords = setOf("כן", "למעלה", "עולה", "מעל", "yes", "up"),
+    downWords = setOf("לא", "למטה", "יורד", "מתחת", "no", "down"),
+    helloPhrases = setOf("שלום", "היי", "אהלן", "בוקר טוב", "ערב טוב", "hello", "hi"),
+    howAreYouPhrases = setOf("מה שלומך", "מה נשמע", "איך הולך"),
+    checkInPhrases = setOf("אתה שומע אותי", "שומע אותי", "אתה פה"),
+    questionStarters = setOf("מה", "איך", "מתי", "איפה", "למה", "כמה", "תגיד לי", "תראה לי"),
+    priceWords = setOf("מחיר", "כמה עולה", "שער", "price"),
+    liquidWords = setOf("נזיל", "נזילות", "נפח", "הכי נזיל"),
+    newsWords = setOf("חדשות", "עדכונים", "news"),
+    balanceWords = setOf("יתרה", "היתרה שלי", "כמה כסף יש לי", "balance"),
+    marketWords = setOf("שוק", "שווקים", "market"),
+    tradingOpenWords = setOf("מתי המסחר נפתח", "מתי נפתח"),
+    navVerbs = setOf("פתח", "תפתח", "תראה", "לך ל", "open", "show"),
+    navTargets = mapOf(
+        "שווקים" to "markets", "שוק" to "markets",
+        "ראשי" to "dashboard", "לוח בקרה" to "dashboard",
+        "תיק" to "portfolio", "פוזיציות" to "portfolio",
+        "ארנק" to "wallet", "הגדרות" to "settings",
+        "התראות" to "notifications", "יתרה" to "dashboard"
+    ),
+    numberWords = mapOf(
+        "אפס" to 0.0, "אחד" to 1.0, "אחת" to 1.0, "שתיים" to 2.0, "שניים" to 2.0,
+        "שלוש" to 3.0, "שלושה" to 3.0, "ארבע" to 4.0, "ארבעה" to 4.0, "חמש" to 5.0, "חמישה" to 5.0,
+        "שש" to 6.0, "שבע" to 7.0, "שמונה" to 8.0, "תשע" to 9.0, "עשר" to 10.0, "עשרה" to 10.0,
+        "עשרים" to 20.0, "שלושים" to 30.0, "ארבעים" to 40.0, "חמישים" to 50.0,
+        "שישים" to 60.0, "שבעים" to 70.0, "שמונים" to 80.0, "תשעים" to 90.0,
+        "מאה" to 100.0, "אלף" to 1000.0
+    ),
+    truncatedTailWords = setOf("מה", "איך", "מתי", "כמה", "של", "על", "את", "ב", "ל"),
+    greetingAnswer = "שלום. מה תרצה לעשות?",
+    howAreYouAnswer = "הכול טוב. מה תרצה לעשות?",
+    checkInAnswer = "כן, אני שומע אותך. מה תרצה לעשות?",
+    outOfScopeAnswer = "אני עוזר רק במסחר ב-Prognos Labs.",
+    askAmount = "לא קלטתי את הסכום. אמור שוב, למשל קנה 50 כן.",
+    askAmountFraction = "כמה בדולרים? אמור את הסכום, למשל מכור 50 לא.",
+    askMarket = "איזה שוק? אמור את המטבע, למשל ביטקוין.",
+    askPrice = "מחיר של איזה מטבע? אמור למשל ביטקוין.",
+    askNews = "חדשות על איזה מטבע? אמור למשל ביטקוין.",
+    answerPrice = "המחיר של {label} הוא {price}.",
+    answerLiquid = "השוק הנזיל ביותר ב-Prognos Labs כרגע הוא {market}, עם נפח של {volume} ב-24 שעות.",
+    answerNews = "החדשות האחרונות על {label}: {title}{source}.{more}",
+    answerBalance = "היתרה שלך היא {balance}.",
+    answerMarket = "{question} כן ב-{yes}, לא ב-{no}.",
+    answerTradingOpen = "המסחר עדיין לא פתוח.",
+    answerHowToTrade = "בחר שוק, בחר קנייה למעלה או מכירה למטה, הזן סכום ואשר.",
+    answerNoPrice = "אין לי מחיר עבור {label} כרגע.",
+    answerNoBalance = "היתרה שלך לא זמינה כרגע.",
+    answerNoMarkets = "השווקים לא נטענו כרגע.",
+    answerNoVolume = "אין לי נתוני נפח כרגע.",
+    answerNoNews = "אין חדשות על {label} כרגע.{extra}",
+    answerNoMarket = "לא מצאתי את השוק הזה כרגע.",
+    enrollPhrases = listOf(
+        "קנה חמישים כן על ביטקוין",
+        "מכור עשרים לא על אתריום",
+        "מה היתרה שלי"
+    ),
+    challengePhrases = listOf(
+        "נהר כחול", "תפוח ירוק", "אור בוקר", "ירח כסוף",
+        "גשר זהב", "מים שקטים", "כוכב בהיר", "גשם קל"
+    ),
+    challengeInstructionFirst = "אמור \"{phrase}\" כדי שהאפליקציה תוודא שזה אתה.",
+    challengeInstructionAgain = "אמור \"{phrase}\" שוב כדי שהאפליקציה תבדוק את הקול שלך.",
+    mishearings = listOf(
+        Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
+        Regex("\\bprogno" + "sis\\b", RegexOption.IGNORE_CASE) to "prognos"
+    )
+)
+
+val CHINESE_VOCAB = LanguageVocab(
+    language = VoiceLanguage.CHINESE,
+    yesWords = setOf("是", "是的", "对", "好", "好的", "确认", "确定", "没问题", "yes", "ok"),
+    noWords = setOf("不", "不是", "不对", "不要", "no"),
+    cancelWords = setOf("取消", "停止", "算了", "cancel", "stop"),
+    buyVerbs = setOf("买", "买入", "购买", "我想买", "buy"),
+    sellVerbs = setOf("卖", "卖出", "出售", "我想卖", "sell"),
+    upWords = setOf("是", "涨", "看涨", "上", "高于", "yes", "up"),
+    downWords = setOf("否", "跌", "看跌", "下", "低于", "no", "down"),
+    helloPhrases = setOf("你好", "您好", "嗨", "早上好", "下午好", "晚上好", "hello", "hi"),
+    howAreYouPhrases = setOf("你好吗", "最近怎么样", "还好吗"),
+    checkInPhrases = setOf("听得到吗", "能听到吗", "你在吗"),
+    questionStarters = setOf("什么", "怎么", "什么时候", "哪里", "多少", "告诉我", "显示"),
+    priceWords = setOf("价格", "多少钱", "报价", "行情", "price"),
+    liquidWords = setOf("流动性", "成交量", "最活跃", "最大成交量"),
+    newsWords = setOf("新闻", "消息", "资讯", "news"),
+    balanceWords = setOf("余额", "我的余额", "我有多少钱", "账户", "balance"),
+    marketWords = setOf("市场", "盘口", "market"),
+    tradingOpenWords = setOf("什么时候开放交易", "什么时候开始交易"),
+    navVerbs = setOf("打开", "进入", "查看", "显示", "open", "show"),
+    navTargets = mapOf(
+        "市场" to "markets", "首页" to "dashboard", "仪表盘" to "dashboard",
+        "持仓" to "portfolio", "投资组合" to "portfolio",
+        "钱包" to "wallet", "设置" to "settings",
+        "通知" to "notifications", "余额" to "dashboard"
+    ),
+    numberWords = mapOf(
+        "零" to 0.0, "一" to 1.0, "二" to 2.0, "两" to 2.0, "三" to 3.0,
+        "四" to 4.0, "五" to 5.0, "六" to 6.0, "七" to 7.0, "八" to 8.0,
+        "九" to 9.0, "十" to 10.0, "二十" to 20.0, "三十" to 30.0,
+        "四十" to 40.0, "五十" to 50.0, "百" to 100.0, "千" to 1000.0, "万" to 10_000.0
+    ),
+    truncatedTailWords = setOf("什么", "怎么", "多少", "的", "在", "和", "给"),
+    greetingAnswer = "你好，想做什么？",
+    howAreYouAnswer = "我很好，想做什么？",
+    checkInAnswer = "听得到，想做什么？",
+    outOfScopeAnswer = "我只回答与 Prognos Labs 交易相关的问题。",
+    askAmount = "没有听清金额。请再说一次，例如买入50美元比特币看涨。",
+    askAmountFraction = "请输入具体美元金额，例如卖出50美元看跌。",
+    askMarket = "哪个市场？请说出币种，例如比特币。",
+    askPrice = "查询哪个币种的价格？例如比特币。",
+    askNews = "查询哪个币种的新闻？例如比特币。",
+    answerPrice = "{label} 当前价格为 {price}。",
+    answerLiquid = "Prognos Labs 目前流动性最高的市场是 {market}，24小时成交量 {volume}。",
+    answerNews = "关于 {label} 的最新消息：{title}{source}。{more}",
+    answerBalance = "你的余额是 {balance}。",
+    answerMarket = "{question} 是：{yes}，否：{no}。",
+    answerTradingOpen = "交易尚未开放。",
+    answerHowToTrade = "选择一个市场，选择买入看涨或卖出看跌，输入金额并确认。",
+    answerNoPrice = "暂时没有 {label} 的价格。",
+    answerNoBalance = "暂时无法获取你的余额。",
+    answerNoMarkets = "市场数据尚未加载。",
+    answerNoVolume = "暂时没有成交量数据。",
+    answerNoNews = "目前没有关于 {label} 的新闻。{extra}",
+    answerNoMarket = "暂时找不到该市场。",
+    enrollPhrases = listOf(
+        "买入五十美元比特币看涨",
+        "卖出二十美元以太坊看跌",
+        "我的余额是多少"
+    ),
+    challengePhrases = listOf(
+        "蓝色河流", "绿色苹果", "清晨阳光", "银色月亮",
+        "金色桥梁", "平静水面", "明亮星星", "轻柔微风"
+    ),
+    challengeInstructionFirst = "请说出“{phrase}”以验证你的身份。",
+    challengeInstructionAgain = "请再说一次“{phrase}”以验证你的声音。",
     mishearings = listOf(
         Regex("\\bbit\\s+coin\\b", RegexOption.IGNORE_CASE) to "bitcoin",
         Regex("\\bprogno" + "sis\\b", RegexOption.IGNORE_CASE) to "prognos"

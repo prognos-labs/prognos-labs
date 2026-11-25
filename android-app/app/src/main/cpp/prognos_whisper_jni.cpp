@@ -1,9 +1,9 @@
-// JNI bridge between the app and the speech library (v1.1.13).
-// Three calls only: init (load the model file), transcribe (audio
-// in, text out), free. The model file lives on the device; it is
-// downloaded on first use and never bundled in the APK. Every call
-// guards its inputs, so a bad handle or empty audio returns null
-// instead of crashing.
+// JNI bridge between the app and whisper.cpp v1.7.6.
+// Three calls only: init (load the model file), transcribe (audio in,
+// text out), free. The model file is bundled in the APK assets, copied
+// into app-private storage on first use, and verified by size and SHA-256
+// before it is loaded. Every call guards its inputs, so a bad handle or
+// empty audio returns null instead of crashing.
 #include <jni.h>
 
 #include <string>
@@ -18,6 +18,10 @@
 
 namespace {
 
+constexpr const char *DEFAULT_DOMAIN_PROMPT =
+    "Prognos Labs, Bitcoin, BTC, Ethereum, ETH, Solana, SOL, XRP, "
+    "Dogecoin, BNB, Zcash, HYPE, Buy, Sell, Yes, No, take profit, stop loss.";
+
 std::string trim(const std::string &text) {
     const size_t first = text.find_first_not_of(" \t\r\n");
     if (first == std::string::npos) return std::string();
@@ -26,11 +30,13 @@ std::string trim(const std::string &text) {
 }
 
 std::string transcribeWithContext(
-        whisper_context *ctx,
-        const float *samples,
-        int nSamples,
-        const char *language,
-        int nThreads) {
+    whisper_context *ctx,
+    const float *samples,
+    int nSamples,
+    const char *language,
+    int nThreads,
+    const char *initialPrompt
+) {
     whisper_full_params params = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
     params.print_realtime = false;
     params.print_progress = false;
@@ -42,6 +48,10 @@ std::string transcribeWithContext(
     params.offset_ms = 0;
     params.no_context = true;
     params.single_segment = false;
+
+    if (initialPrompt != nullptr && initialPrompt[0] != '\0') {
+        params.initial_prompt = initialPrompt;
+    }
 
     if (whisper_full(ctx, params, samples, nSamples) != 0) {
         LOGW("transcribe failed");
@@ -61,18 +71,19 @@ std::string transcribeWithContext(
     return out;
 }
 
-}  // namespace
+} // namespace
 
 extern "C" {
 
 JNIEXPORT jlong JNICALL
 Java_xyz_fruitslice_prognos_voice_WhisperNative_nativeInit(
-        JNIEnv *env, jobject /* thiz */, jstring modelPath) {
+    JNIEnv *env, jobject /* thiz */, jstring modelPath
+) {
     if (modelPath == nullptr) return 0;
     const char *path = env->GetStringUTFChars(modelPath, nullptr);
     if (path == nullptr) return 0;
     whisper_context *ctx =
-            whisper_init_from_file_with_params(path, whisper_context_default_params());
+        whisper_init_from_file_with_params(path, whisper_context_default_params());
     env->ReleaseStringUTFChars(modelPath, path);
     if (ctx == nullptr) LOGW("model load failed");
     return reinterpret_cast<jlong>(ctx);
@@ -80,15 +91,23 @@ Java_xyz_fruitslice_prognos_voice_WhisperNative_nativeInit(
 
 JNIEXPORT jstring JNICALL
 Java_xyz_fruitslice_prognos_voice_WhisperNative_nativeTranscribe(
-        JNIEnv *env, jobject /* thiz */, jlong contextPtr, jshortArray pcm,
-        jstring language, jint threads) {
+    JNIEnv *env,
+    jobject /* thiz */,
+    jlong contextPtr,
+    jshortArray pcm,
+    jstring language,
+    jint threads,
+    jstring initialPrompt
+) {
     whisper_context *ctx = reinterpret_cast<whisper_context *>(contextPtr);
     if (ctx == nullptr || pcm == nullptr) return nullptr;
+
     const jsize len = env->GetArrayLength(pcm);
     if (len <= 0) return nullptr;
 
     jshort *elems = env->GetShortArrayElements(pcm, nullptr);
     if (elems == nullptr) return nullptr;
+
     std::vector<float> samples(static_cast<size_t>(len));
     for (jsize i = 0; i < len; ++i) {
         samples[static_cast<size_t>(i)] = static_cast<float>(elems[i]) / 32768.0f;
@@ -106,17 +125,32 @@ Java_xyz_fruitslice_prognos_voice_WhisperNative_nativeTranscribe(
     }
     if (!langOwned.empty()) lang = langOwned.c_str();
 
+    std::string promptOwned;
+    const char *prompt = DEFAULT_DOMAIN_PROMPT;
+    if (initialPrompt != nullptr) {
+        const char *pChars = env->GetStringUTFChars(initialPrompt, nullptr);
+        if (pChars != nullptr) {
+            promptOwned = pChars;
+            env->ReleaseStringUTFChars(initialPrompt, pChars);
+        }
+    }
+    if (!promptOwned.empty()) prompt = promptOwned.c_str();
+
     const int nThreads = threads < 1 ? 1 : (threads > 4 ? 4 : threads);
-    const std::string text = transcribeWithContext(ctx, samples.data(), len, lang, nThreads);
+    const std::string text = transcribeWithContext(
+        ctx, samples.data(), len, lang, nThreads, prompt
+    );
     if (text.empty()) return nullptr;
     return env->NewStringUTF(text.c_str());
 }
 
 JNIEXPORT void JNICALL
 Java_xyz_fruitslice_prognos_voice_WhisperNative_nativeFree(
-        JNIEnv * /* env */, jobject /* thiz */, jlong contextPtr) {
+    JNIEnv * /* env */, jobject /* thiz */, jlong contextPtr
+) {
     whisper_context *ctx = reinterpret_cast<whisper_context *>(contextPtr);
     if (ctx != nullptr) whisper_free(ctx);
 }
 
-}  // extern "C"
+} // extern "C"
+

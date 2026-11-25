@@ -2,11 +2,10 @@ cmake_minimum_required(VERSION 3.22.1)
 
 project("prognos_whisper")
 
-# The speech library (v1.1.13): the open-source speech library,
-# built from its own sources at build time, so the app tree stays
-# small and the library version is pinned. The model file is NOT
-# bundled: it downloads on first use and is checked by size and
-# hash before it is used.
+# On-device speech library (whisper.cpp v1.7.6), built from source at build
+# time with a pinned tag. The model file is bundled in app/src/main/assets/,
+# copied to app-private storage on first use, and verified by size and
+# SHA-256 in WhisperModel.kt before it is loaded.
 include(FetchContent)
 FetchContent_Declare(
     whisper
@@ -25,3 +24,4 @@ add_library(prognos_whisper SHARED prognos_whisper_jni.cpp)
 find_library(log-lib log)
 
 target_link_libraries(prognos_whisper whisper ${log-lib} android)
+
