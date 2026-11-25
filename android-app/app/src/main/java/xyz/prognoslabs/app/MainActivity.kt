@@ -7,7 +7,6 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.fragment.app.FragmentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -58,6 +57,7 @@ import androidx.navigation.navArgument
 import xyz.prognoslabs.app.data.Analytics
 import xyz.prognoslabs.app.ui.AppViewModel
 import xyz.prognoslabs.app.ui.BiometricGate
+import xyz.prognoslabs.app.ui.CrashReporter
 import xyz.prognoslabs.app.ui.AuthScreen
 import xyz.prognoslabs.app.ui.ChangePasswordScreen
 import xyz.prognoslabs.app.ui.DashboardScreen
@@ -80,7 +80,20 @@ private data class Tab(val route: String, val label: String, val icon: ImageVect
 class MainActivity : FragmentActivity() {
     private val vm: AppViewModel by viewModels()
 
+    // v1.1.21: the mic permission launcher lives on the activity,
+    // registered once here. It used to live in the Compose scaffold,
+    // and on a fresh install the first tap on an enrollment mic
+    // closed the app before the permission box ever appeared.
+    // Launching from the activity is the safe pattern.
+    private val micPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            vm.onVoicePermissionResult(granted)
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        // v1.1.21: save the stack trace when the app dies, so the
+        // next launch can show it in Settings.
+        CrashReporter.install(this)
         // v1.1.9: edge-to-edge on every device. The app draws behind
         // the status bar and every camera cutout, with transparent
         // system bars; each screen lays its content out with window
@@ -115,6 +128,19 @@ class MainActivity : FragmentActivity() {
             vm.biometricTradeRequest.collect { request ->
                 BiometricGate.authenticate(this@MainActivity) { result ->
                     vm.onBiometricTradeResult(request.requestId, result)
+                }
+            }
+        }
+        // Mic permission: the ViewModel asks, the activity launches
+        // the system box, the answer goes back to the ViewModel. A
+        // launch that fails shows a plain message instead of
+        // closing the app (v1.1.21).
+        lifecycleScope.launch {
+            vm.voicePermissionNeeded.collect {
+                try {
+                    micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                } catch (e: Exception) {
+                    vm.onVoicePermissionResult(false)
                 }
             }
         }
@@ -221,17 +247,6 @@ fun MainScaffold(vm: AppViewModel) {
     val backStack by nav.currentBackStackEntryAsState()
     val route = backStack?.destination?.route
     val showBar = route == "dashboard" || route == "markets" || route == "portfolio" || route == "wallet"
-
-    // Voice trading: the mic permission is asked from here, and the
-    // result goes back to the view model, which starts listening.
-    val micPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted -> vm.onVoicePermissionResult(granted) }
-    LaunchedEffect(Unit) {
-        vm.voicePermissionNeeded.collect {
-            micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-        }
-    }
 
     fun goTab(route: String) {
         tab = route

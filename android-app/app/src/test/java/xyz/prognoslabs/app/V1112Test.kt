@@ -665,9 +665,9 @@ class V1112Test {
     // ---- 8. Version ----
 
     @Test
-    fun versionIs1120() {
+    fun versionIs1121() {
         val gradle = readSource("app/build.gradle.kts")
-        assertTrue(gradle.contains("versionCode = 30"))
-        assertTrue(gradle.contains("versionName = \"1.1.20\""))
+        assertTrue(gradle.contains("versionCode = 31"))
+        assertTrue(gradle.contains("versionName = \"1.1.21\""))
     }
 }

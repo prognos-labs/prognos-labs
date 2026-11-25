@@ -253,6 +253,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val alertsEnabled: StateFlow<Boolean> = alertsStore.enabled
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
+    /** The last saved crash report, if the app died on an earlier
+     * launch (v1.1.21). Shown in Settings so it can be copied out. */
+    private val _lastCrashReport = MutableStateFlow<String?>(null)
+    val lastCrashReport: StateFlow<String?> = _lastCrashReport.asStateFlow()
+
+    fun clearCrashReport() {
+        CrashReporter.clear(getApplication())
+        _lastCrashReport.value = null
+    }
+
+    init {
+        _lastCrashReport.value = CrashReporter.readLastCrash(getApplication())
+    }
+
     private val _home = MutableStateFlow(HomeState())
     val home: StateFlow<HomeState> = _home.asStateFlow()
 

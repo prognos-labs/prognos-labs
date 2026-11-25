@@ -68,6 +68,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -1261,7 +1263,9 @@ fun SettingsScreen(
     val defaultAmount by vm.defaultTradeAmount.collectAsState()
     val feedbackOptIn by vm.voiceFeedbackOptIn.collectAsState()
     val voiceLanguage by vm.voiceLanguage.collectAsState()
+    val crashReport by vm.lastCrashReport.collectAsState()
     var showLanguagePicker by remember { mutableStateOf(false) }
+    var crashCopied by remember { mutableStateOf(false) }
     var tradeSizeInput by remember(defaultAmount) { mutableStateOf(defaultAmount) }
     var expandedRow by remember { mutableStateOf<SettingsRowId?>(null) }
 
@@ -1589,6 +1593,47 @@ if (showLanguagePicker) {
                         color = AskRed,
                         modifier = Modifier.clickable { vm.resetVoiceEnrollment() }
                     )
+                }
+                // v1.1.21: when the app died on an earlier launch,
+                // the saved crash report shows here so it can be
+                // copied out and sent to us. Nothing is sent on its own.
+                val report = crashReport
+                if (report != null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider(color = c.border)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("Last crash report", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = c.ink)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        "The app closed unexpectedly once. Copy this report and send it to us so the crash can be fixed.",
+                        fontSize = 13.sp,
+                        color = c.grey
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val clipboard = LocalClipboardManager.current
+                        Button(
+                            onClick = {
+                                clipboard.setText(AnnotatedString(report))
+                                crashCopied = true
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (dark) Lime else c.primary,
+                                contentColor = if (dark) Color(0xFF111111) else c.onPrimary
+                            )
+                        ) { Text(if (crashCopied) "Copied" else "Copy report", fontWeight = FontWeight.Bold, fontSize = 14.sp) }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            "Clear",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AskRed,
+                            modifier = Modifier.clickable {
+                                vm.clearCrashReport()
+                                crashCopied = false
+                            }
+                        )
+                    }
                 }
             }
         }

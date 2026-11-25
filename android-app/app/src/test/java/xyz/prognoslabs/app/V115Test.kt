@@ -138,7 +138,7 @@ class V115Test {
     // ---- 3. Shipping shape ----
 
     @Test
-    fun versionIs1120() {
+    fun versionIs1121() {
         val cwd = System.getProperty("user.dir") ?: "."
         val gradle = listOf(
             File("app/build.gradle.kts"),
@@ -148,8 +148,8 @@ class V115Test {
         ).firstOrNull { it.isFile }
             ?: throw AssertionError("Cannot find app/build.gradle.kts from $cwd")
         val text = gradle.readText()
-        assertTrue("versionCode must be 30", text.contains("versionCode = 30"))
-        assertTrue("versionName must be 1.1.20", text.contains("versionName = \"1.1.20\""))
+        assertTrue("versionCode must be 31", text.contains("versionCode = 31"))
+        assertTrue("versionName must be 1.1.21", text.contains("versionName = \"1.1.21\""))
     }
 }
 
