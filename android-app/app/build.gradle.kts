@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -62,7 +64,7 @@ android {
     signingConfigs {
         if (rootProject.file("signing.properties").exists()) {
             create("prognos") {
-                val props = java.util.Properties()
+                val props = Properties()
                 rootProject.file("signing.properties").inputStream().use { props.load(it) }
                 storeFile = file(props.getProperty("storeFile"))
                 storePassword = props.getProperty("storePassword")
