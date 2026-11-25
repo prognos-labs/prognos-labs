@@ -19,17 +19,15 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      # Pin the SDK pieces the app needs. Without api-level/build-tools the
-      # action tries to install the old "tools" package, which no longer
-      # exists, and the step fails.
-      - name: Set up Android SDK 34
-        uses: android-actions/setup-android@v3
-        with:
-          api-level: 34
-          build-tools: 34.0.0
-
-      - name: Install CMake 3.22.1
-        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "cmake;3.22.1"
+      # setup-android@v3 is broken: it always tries to install the old
+      # "tools" package, which no longer exists in the SDK repository.
+      # The runner already has cmdline-tools, so install the pieces
+      # directly with sdkmanager instead.
+      - name: Install Android SDK 34
+        run: |
+          SDKMANAGER=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+          yes | "$SDKMANAGER" "platform-tools" "platforms;android-34" "build-tools;34.0.0" "cmake;3.22.1"
 
       - name: Restore google-services.json
         env:
