@@ -1160,6 +1160,9 @@ private fun restartListening() {
                 // nothing at all.
                 _voiceListeningText.value = (cleanRecognizedText(event.text) ?: "").take(200)
             }
+            is VoiceEngine.Event.Level -> {
+                _voiceAudioLevel.value = event.rmsNorm
+            }
             is VoiceEngine.Event.Final -> {
                 listenWatchdogJob?.cancel()
                 _voiceAudioLevel.value = 0f
@@ -1288,6 +1291,14 @@ private fun restartListening() {
                 restartListening()
             }
         }
+    }
+
+    /** Clears the voice check challenge state: no pending phrase,
+     * no attempts counted, not waiting on challenge words. */
+    private fun clearChallengeState() {
+        awaitingChallengeWords = false
+        voicePendingChallenge = null
+        voiceChallengeAttempts = 0
     }
 
     /** Voice check pass, after the words: the app shows and speaks
