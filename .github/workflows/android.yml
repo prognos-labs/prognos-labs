@@ -62,8 +62,8 @@ jobs:
           EOF
 
       # The repo's gradle.properties points Gradle at hatch-egress-proxy,
-      # a host that only exists on Muse's own machine. On this runner there
-      # is no proxy, so those lines are removed for this run only.
+      # a host that only exists on the local development machine. On this
+      # runner there is no proxy, so those lines are removed for this run only.
       - name: Remove box proxy settings
         run: |
           sed -i '/^systemProp\./d' android-app/gradle.properties
