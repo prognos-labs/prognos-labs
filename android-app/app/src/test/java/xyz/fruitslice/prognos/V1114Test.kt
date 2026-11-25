@@ -36,9 +36,9 @@ import xyz.fruitslice.prognos.ui.settingsDropDownRows
 class V1114Test {
 
     @Test
-    fun versionIs116() {
+    fun versionIs118() {
         assertEquals(26, BuildConfig.VERSION_CODE)
-        assertEquals("1.1.16", BuildConfig.VERSION_NAME)
+        assertEquals("1.1.18", BuildConfig.VERSION_NAME)
     }
 
     // ---- Fix 1: settings are compact drop-down rows ----

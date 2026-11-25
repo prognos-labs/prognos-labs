@@ -97,10 +97,14 @@ class V117Test {
     }
 
     @Test
-    fun stopListeningDoesNotStopTheCapture() {
+    fun stopListeningStopsTheWordsPassCapture() {
+        // v1.1.18: the words pass records through the capture when
+        // cloud ASR is used, so hanging up must stop that capture
+        // or the mic would keep recording. The enrollment capture is
+        // a separate session, started only by startVoiceCapture.
         val engine = readSource("java/xyz/fruitslice/prognos/ui/VoiceEngine.kt")
         val body = funBody(engine, "fun stopListening(")
-        assertFalse("Stopping the words pass must not stop a capture", body.contains("stopCaptureSignal"))
+        assertTrue("Stopping the words pass must stop its capture", body.contains("stopCaptureSignal"))
     }
 
     // ---- 2. The split: voice sample pass records without the recognizer ----

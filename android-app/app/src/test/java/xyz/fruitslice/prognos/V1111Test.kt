@@ -74,10 +74,10 @@ class V1111Test {
         RuntimeEnvironment.getApplication().applicationContext
 
     @Test
-    fun versionIs116() {
+    fun versionIs118() {
         val gradle = readSource("app/build.gradle.kts")
-        assertTrue(gradle.contains("versionCode = 26"))
-        assertTrue(gradle.contains("versionName = \"1.1.16\""))
+        assertTrue(gradle.contains("versionCode = 28"))
+        assertTrue(gradle.contains("versionName = \"1.1.18\""))
     }
 
     // ---- 1. Listening cuts off mid-sentence ----
@@ -86,11 +86,11 @@ class V1111Test {
     fun engineWaitsBeforeFinalizing() {
         // v1.1.16: the built-in recognizer's silence extras are
         // gone with it. The speech library ends a segment after
-        // 1,200 ms of silence once speech was heard, and never on
+        // 750 ms of silence once speech was heard, and never on
         // silence alone.
         val recognizer = readSource("app/src/main/java/xyz/fruitslice/prognos/voice/WhisperRecognizer.kt")
         assertTrue(recognizer.contains("SILENCE_TO_FINAL_MS"))
-        assertTrue("Silence must run 1,200 ms before finalizing", recognizer.contains("1_200L"))
+        assertTrue("Silence must run 750 ms before finalizing", recognizer.contains("750L"))
         assertTrue(
             "The finalize rule must need speech heard",
             recognizer.contains("speechHeard && silenceMs >= SILENCE_TO_FINAL_MS")

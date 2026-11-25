@@ -36,9 +36,9 @@ class V1113Test {
         )
 
     @Test
-    fun versionIs116() {
+    fun versionIs118() {
         assertEquals(26, BuildConfig.VERSION_CODE)
-        assertEquals("1.1.16", BuildConfig.VERSION_NAME)
+        assertEquals("1.1.18", BuildConfig.VERSION_NAME)
     }
 
     @Test
@@ -50,10 +50,10 @@ class V1113Test {
         assertEquals("de", WhisperRecognizer.whisperLanguageCode(Locale("de")))
         assertEquals("tr", WhisperRecognizer.whisperLanguageCode(Locale("tr")))
         assertEquals("ar", WhisperRecognizer.whisperLanguageCode(Locale("ar")))
-        // Anything else falls back to English, including a locale
-        // with a region.
+        // Japanese still falls back to English; Chinese is
+        // supported since v1.1.17.
         assertEquals("en", WhisperRecognizer.whisperLanguageCode(Locale("ja")))
-        assertEquals("en", WhisperRecognizer.whisperLanguageCode(Locale("zh", "CN")))
+        assertEquals("zh", WhisperRecognizer.whisperLanguageCode(Locale("zh", "CN")))
         assertEquals("es", WhisperRecognizer.whisperLanguageCode(Locale("es", "MX")))
     }
 

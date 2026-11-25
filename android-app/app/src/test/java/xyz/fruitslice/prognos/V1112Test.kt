@@ -465,9 +465,11 @@ class V1112Test {
     @Test
     fun unsupportedLocaleFallsBackToEnglish() {
         assertEquals(VoiceLanguage.ENGLISH, voiceLanguageForLocale(Locale("ja")))
-        assertEquals(VoiceLanguage.ENGLISH, voiceLanguageForLocale(Locale("zh")))
+        // Chinese is supported since v1.1.17, so Korean stands in
+        // as the unsupported locale here.
+        assertEquals(VoiceLanguage.ENGLISH, voiceLanguageForLocale(Locale("ko")))
         assertFalse(voiceLanguageSupported(Locale("ja")))
-        assertFalse(voiceLanguageSupported(Locale("zh")))
+        assertFalse(voiceLanguageSupported(Locale("ko")))
         assertTrue(voiceLanguageSupported(Locale("es")))
         assertTrue(voiceLanguageSupported(Locale("ar")))
         assertTrue(voiceLanguageSupported(Locale("en")))
@@ -663,9 +665,9 @@ class V1112Test {
     // ---- 8. Version ----
 
     @Test
-    fun versionIs116() {
+    fun versionIs118() {
         val gradle = readSource("app/build.gradle.kts")
-        assertTrue(gradle.contains("versionCode = 26"))
-        assertTrue(gradle.contains("versionName = \"1.1.16\""))
+        assertTrue(gradle.contains("versionCode = 28"))
+        assertTrue(gradle.contains("versionName = \"1.1.18\""))
     }
 }
