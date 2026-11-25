@@ -145,11 +145,11 @@ class V1116Test {
 
     @Test
     fun bundledModelPresentWithKnownSizeAndHash() {
-        val model = File(mainRoot(), "assets/ggml-tiny.bin")
+        val model = File(mainRoot(), "assets/ggml-tiny-q8_0.bin")
         assertTrue("The bundled model must be in src/main/assets", model.isFile)
         assertEquals(
             "The bundled model must be the known tiny model",
-            77_691_713L, model.length()
+            43_537_433L, model.length()
         )
         val digest = MessageDigest.getInstance("SHA-256")
         model.inputStream().use { input ->
@@ -162,7 +162,7 @@ class V1116Test {
         val sha = digest.digest().joinToString("") { "%02x".format(it) }
         assertEquals(
             "The bundled model hash must match the known model",
-            "be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21",
+            "c2085835d3f50733e2ff6e4b41ae8a2b8d8110461e18821b09a15c40c42d1cca",
             sha
         )
     }

@@ -42,14 +42,15 @@ class WhisperModelManager(
 ) {
     companion object {
         /** The model file, bundled in the APK under assets. */
-        const val MODEL_FILE_NAME = "ggml-tiny.bin"
+        const val MODEL_FILE_NAME = "ggml-tiny-q8_0.bin"
 
-        /** Size and hash of ggml-tiny.bin, verified on the build
-         * machine 22 Nov 2026 by downloading the file and hashing
-         * it. A file that does not match both is not used. */
-        const val MODEL_SIZE_BYTES = 77_691_713L
+        /** Size and hash of ggml-tiny-q8_0.bin, verified on the build
+         * machine 25 Nov 2026 by downloading the file from the
+         * official whisper.cpp release and hashing it. A file that
+         * does not match both is not used. */
+        const val MODEL_SIZE_BYTES = 43_537_433L
         const val MODEL_SHA256 =
-            "be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21"
+            "c2085835d3f50733e2ff6e4b41ae8a2b8d8110461e18821b09a15c40c42d1cca"
 
         fun sha256Hex(bytes: ByteArray): String {
             val digest = MessageDigest.getInstance("SHA-256")
