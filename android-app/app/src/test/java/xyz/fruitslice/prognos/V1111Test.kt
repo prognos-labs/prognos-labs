@@ -100,7 +100,10 @@ class V1111Test {
         // shown as speech, then shown as the live words.
         val vm = readSource("app/src/main/java/xyz/fruitslice/prognos/ui/AppViewModel.kt")
         assertTrue(vm.contains("cleanRecognizedText(event.text)"))
-        assertTrue(vm.contains("_voiceListeningText.value = cleanRecognizedText(event.text)"))
+        // v1.1.17: the live words are capped at 200 chars so the
+        // sheet never fills with one run-on paragraph, but they are
+        // still cleaned first.
+        assertTrue(vm.contains("_voiceListeningText.value = (cleanRecognizedText(event.text)"))
         assertFalse("A partial must never reach processVoiceFinal", vm.contains("Partial -> processVoiceFinal"))
     }
 
