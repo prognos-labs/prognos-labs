@@ -1,29 +1,30 @@
 package xyz.prognoslabs.app
 
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import xyz.prognoslabs.app.data.TradingLock
 
 /**
  * The gate is the rule the whole app follows: trading, deposits and
- * withdrawals are all closed until trading opens. Every money button
- * in the app reads these flags, so if one of them ever flips to true
- * by mistake, this test fails and the build cannot ship it.
+ * withdrawals are all open for testers (Flint, 25 Nov). Every money
+ * button in the app reads these flags, so if one of them ever flips
+ * back to false by mistake, this test fails and the build cannot
+ * ship it.
  */
 class TradingLockTest {
 
     @Test
-    fun tradingIsClosed() {
-        assertFalse(TradingLock.tradingOpen)
+    fun tradingIsOpen() {
+        assertTrue(TradingLock.tradingOpen)
     }
 
     @Test
-    fun depositsAreClosed() {
-        assertFalse(TradingLock.depositsOpen)
+    fun depositsAreOpen() {
+        assertTrue(TradingLock.depositsOpen)
     }
 
     @Test
-    fun withdrawalsAreClosed() {
-        assertFalse(TradingLock.withdrawalsOpen)
+    fun withdrawalsAreOpen() {
+        assertTrue(TradingLock.withdrawalsOpen)
     }
 }
