@@ -251,6 +251,17 @@ class V1128Test {
     }
 
     @Test
+    fun balanceIsNotBinance() {
+        // The first fuzzy matcher turned "balance" into BNB (2 edits
+        // from "binance", same first and last letter) and "show my
+        // balance" opened a BNB market instead of the dashboard.
+        // A word the parser already understands must never become
+        // a coin.
+        assertEquals(null, assetMention("show my balance"))
+        assertEquals(null, assetMention("What is my balance?"))
+    }
+
+    @Test
     fun levenshteinChecks() {
         assertEquals(3, levenshtein("ecterium", "ethereum"))
         assertEquals(3, levenshtein("kitten", "sitting"))

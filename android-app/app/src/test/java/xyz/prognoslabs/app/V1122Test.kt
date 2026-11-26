@@ -15,8 +15,9 @@ import xyz.prognoslabs.app.ui.VoiceEngine
  * got the out-of-scope refusal. A bare trade request is a trade to
  * start, not a question to refuse: the voice now answers with the
  * guided trade prompt and keeps listening. The cloud capture ends
- * after 800 ms of silence instead of 1,500 ms, so the voice answers
- * sooner.
+ * after 1200 ms of silence instead of 1,500 ms (v1.1.28: was 800 ms,
+ * and a pause between two sentences cut the turn in half), so the
+ * voice still answers soon.
  *
  * v1.1.24: the spoken voice is gone on Flint's order. Answers and
  * the order read-back are shown on screen instead of spoken aloud,
@@ -45,8 +46,8 @@ class V1122Test {
     @Test
     fun versionIs1123() {
         val gradle = readSource("app/build.gradle.kts")
-        assertTrue(gradle.contains("versionCode = 37"))
-        assertTrue(gradle.contains("versionName = \"1.1.27\""))
+        assertTrue(gradle.contains("versionCode = 38"))
+        assertTrue(gradle.contains("versionName = \"1.1.28\""))
     }
 
     // ---- Error 1: "can you take a trade for me" must not refuse ----
@@ -137,8 +138,8 @@ class V1122Test {
     // ---- Speed: the cloud capture ends sooner ----
 
     @Test
-    fun captureEndsAfter800msOfSilence() {
-        assertTrue(VoiceEngine.shouldStopCapture(true, 800L))
-        assertFalse(VoiceEngine.shouldStopCapture(true, 799L))
+    fun captureEndsAfter1200msOfSilence() {
+        assertTrue(VoiceEngine.shouldStopCapture(true, 1200L))
+        assertFalse(VoiceEngine.shouldStopCapture(true, 1199L))
     }
 }

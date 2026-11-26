@@ -64,7 +64,7 @@ class VoiceGateTest {
         }
         assertTrue(gate.speechHeard)
         assertFalse(gate.shouldFinalize(now, now))
-        now += 800L
+        now += 1200L
         gate.onFrame(80.0, now, now)
         assertTrue(gate.shouldFinalize(now, now))
     }

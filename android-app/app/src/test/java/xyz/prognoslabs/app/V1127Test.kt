@@ -56,8 +56,8 @@ class V1127Test {
     @Test
     fun versionIs1127() {
         val gradle = readSource("app/build.gradle.kts")
-        assertTrue(gradle.contains("versionCode = 37"))
-        assertTrue(gradle.contains("versionName = \"1.1.27\""))
+        assertTrue(gradle.contains("versionCode = 38"))
+        assertTrue(gradle.contains("versionName = \"1.1.28\""))
     }
 
     // ---- Flint's Portuguese case, with and without a loaded market ----

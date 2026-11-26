@@ -552,7 +552,10 @@ fun assetMention(text: String): Pair<String, Int>? {
     // a coin name counts: edit distance 3 or less, at least 6
     // letters, same first and last letter, so the first and last
     // sounds the recognizer usually gets right still anchor it.
-    // The best match wins, and a tie is no match at all.
+    // But never a word the parser already understands in any
+    // language: "balance" is 2 edits from "binance", and "show my
+    // balance" opened a BNB market instead of the dashboard. The
+    // best match wins, and a tie is no match at all.
     var bestCode: String? = null
     var bestPos = -1
     var bestDist = Int.MAX_VALUE
@@ -560,6 +563,7 @@ fun assetMention(text: String): Pair<String, Int>? {
     for (tok in tokens) {
         val word = tok.word.lowercase()
         if (word.length < 6) continue
+        if (word in KNOWN_VOICE_WORDS) continue
         for ((key, code) in ASSET_WORDS) {
             if (key.length < 5) continue
             if (word.first() != key.first() || word.last() != key.last()) continue
@@ -576,6 +580,49 @@ fun assetMention(text: String): Pair<String, Int>? {
     }
     if (bestCode != null && !tied) return bestCode to bestPos
     return null
+}
+
+/**
+ * Every word the parser already understands, in every language:
+ * greeting, question, trading, navigation and balance words. The
+ * fuzzy asset match must never claim one of these as a coin.
+ */
+private val KNOWN_VOICE_WORDS: Set<String> by lazy {
+    val words = mutableSetOf<String>()
+    fun addAll(phrases: Iterable<String>) {
+        for (phrase in phrases) {
+            phrase.lowercase().split(' ', '-', '\'').forEach { w ->
+                val clean = w.trim('.', '?', '!', ',', ';', ':')
+                if (clean.isNotEmpty()) words += clean
+            }
+        }
+    }
+    for (language in VoiceLanguage.values()) {
+        val v = vocabFor(language)
+        addAll(v.yesWords)
+        addAll(v.noWords)
+        addAll(v.cancelWords)
+        addAll(v.buyVerbs)
+        addAll(v.sellVerbs)
+        addAll(v.upWords)
+        addAll(v.downWords)
+        addAll(v.helloPhrases)
+        addAll(v.howAreYouPhrases)
+        addAll(v.checkInPhrases)
+        addAll(v.questionStarters)
+        addAll(v.priceWords)
+        addAll(v.liquidWords)
+        addAll(v.newsWords)
+        addAll(v.balanceWords)
+        addAll(v.marketWords)
+        addAll(v.tradingOpenWords)
+        addAll(v.navVerbs)
+        addAll(v.navTargets.keys)
+        addAll(v.numberWords.keys)
+        addAll(v.truncatedTailWords)
+        addAll(tellAboutPhrases(language))
+    }
+    words
 }
 
 /** Plain edit distance between two words, for the fuzzy asset

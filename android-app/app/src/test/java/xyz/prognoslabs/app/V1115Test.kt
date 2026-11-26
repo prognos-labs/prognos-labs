@@ -22,8 +22,8 @@ class V1115Test {
 
     @Test
     fun versionIs1123() {
-        assertEquals(37, BuildConfig.VERSION_CODE)
-        assertEquals("1.1.27", BuildConfig.VERSION_NAME)
+        assertEquals(38, BuildConfig.VERSION_CODE)
+        assertEquals("1.1.28", BuildConfig.VERSION_NAME)
     }
 
     // ---- Fix 1: the mic is a header button, never floating ----
@@ -176,7 +176,7 @@ class V1115Test {
         val vm = File(root, "src/main/java/xyz/prognoslabs/app/ui/AppViewModel.kt").readText()
         val start = vm.indexOf("private fun processVoiceFinal")
         assertTrue("processVoiceFinal must exist", start >= 0)
-        val body = vm.substring(start, (start + 1600).coerceAtMost(vm.length))
+        val body = vm.substring(start, (start + 3200).coerceAtMost(vm.length))
         assertTrue(
             "processVoiceFinal must show the heard words",
             body.contains("_voiceListeningText.value = heard")

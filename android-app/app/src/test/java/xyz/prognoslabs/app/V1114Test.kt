@@ -37,8 +37,8 @@ class V1114Test {
 
     @Test
     fun versionIs1123() {
-        assertEquals(37, BuildConfig.VERSION_CODE)
-        assertEquals("1.1.27", BuildConfig.VERSION_NAME)
+        assertEquals(38, BuildConfig.VERSION_CODE)
+        assertEquals("1.1.28", BuildConfig.VERSION_NAME)
     }
 
     // ---- Fix 1: settings are compact drop-down rows ----
@@ -65,13 +65,15 @@ class V1114Test {
 
     @Test
     fun captureStopsAfterSilenceFollowingSpeech() {
-        // v1.1.22: speech, then quiet for 800 ms (was 1,500 ms): the
-        // capture ends on its own, so enrollment never waits on a
-        // Stop tap, and the cloud path answers sooner.
-        assertTrue(VoiceEngine.shouldStopCapture(true, 800L))
+        // v1.1.22: speech, then quiet for 1200 ms (v1.1.28: was
+        // 800 ms, and a pause between two sentences cut the turn
+        // in half): the capture ends on its own, so enrollment
+        // never waits on a Stop tap, and the cloud path answers
+        // sooner.
+        assertTrue(VoiceEngine.shouldStopCapture(true, 1200L))
         assertTrue(VoiceEngine.shouldStopCapture(true, 5_000L))
         // A short pause does not end it: the user may still be talking.
-        assertFalse(VoiceEngine.shouldStopCapture(true, 799L))
+        assertFalse(VoiceEngine.shouldStopCapture(true, 1199L))
         assertFalse(VoiceEngine.shouldStopCapture(true, 400L))
         // Silence before any speech never ends it: the user may not
         // have started yet.
