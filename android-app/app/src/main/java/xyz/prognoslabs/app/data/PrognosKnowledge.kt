@@ -83,11 +83,15 @@ fun platformAnswer(lowerText: String, language: VoiceLanguage = VoiceLanguage.EN
             "When you say yes, the order is filled and the position is yours until the market settles or you sell it early. " +
                 "If you say no, nothing happens and no order is placed."
 
+        // Portfolio question form that does not navigate
+        t.contains("portfolio") && (t.contains("how") || t.contains("what") || t.contains("where") || t.contains("see") || t.contains("check")) ->
+            "Your portfolio is on the Portfolio tab. It shows your balance and your positions. It is empty until you deposit."
+
         // Topic 5: How a market settles and how winnings are paid
-        // QUESTION FOR FLINT: exact payout timing and payout coin are not confirmed yet.
         t.contains("settle") || t.contains("winnings") || t.contains("get paid") || t.contains("payout") ->
-            "When the event is decided, the market settles. A human decides the result, not the voice and not the app on its own. " +
+            "When the event is decided, the market settles. A human decides the result, not the app on its own. " +
                 "Winning shares are paid out and losing shares are not. " +
+                "Winnings are paid in 30 days, in USDT. " +
                 "Winnings go back to you in the app, linked to your own wallet, because Prognos Labs is non custodial."
 
         // Topic 7: How to ask about an open position
@@ -239,9 +243,10 @@ private fun platformAnswerTranslated(t: String, language: VoiceLanguage): String
                 "El precio es lo que pagas por una acción en ese mercado, y es el precio que se muestra en el gráfico. La cantidad es el dinero que pones. La cantidad mínima es de $5 y no hay cantidad máxima. Di tu lado, el precio y la cantidad en tu orden de voz, y te lo leeré todo antes de que pase nada."
             has("después de decir sí", "despues de decir si", "al confirmar") ->
                 "Cuando dices sí, la orden se completa y la posición es tuya hasta que el mercado cierre o la vendas antes. Si dices no, no pasa nada."
-            // QUESTION FOR FLINT: exact payout timing and payout coin are not confirmed yet.
+            has("cartera", "posiciones", "portfolio") && has("cómo", "como", "dónde", "donde", "ver", "qué", "que") ->
+                "Tu cartera está en la pestaña Cartera. Muestra tu saldo y tus posiciones. Está vacía hasta que deposites."
             has("resuelve", "liquidación", "liquidacion", "ganancias", "cobrar", "pagan") ->
-                "Cuando se decide el evento, el mercado se resuelve. Una persona decide el resultado, no la voz ni la app sola. Las acciones ganadoras se pagan y las demás no. Las ganancias vuelven a ti en la app, ligada a tu propia billetera, porque no guardamos fondos."
+                "Cuando se decide el evento, el mercado se resuelve. Una persona decide el resultado, no la app sola. Las acciones ganadoras se pagan y las demás no. Las ganancias se pagan en 30 días, en USDT. Las ganancias vuelven a ti en la app, ligada a tu propia billetera, porque no guardamos fondos."
             has("posiciones abiertas", "mi posición", "mi posicion") ->
                 "Puedes preguntarme qué posiciones tienes abiertas. Puedo decirte el mercado, el lado que elegiste, la cantidad que pusiste y si sigue abierta. Si no tengo datos en vivo ahora, te diré que no puedo ver una posición abierta."
             has("haz esta operación ahora", "pon esta orden ahora") ->
@@ -275,9 +280,10 @@ private fun platformAnswerTranslated(t: String, language: VoiceLanguage): String
                 "Le prix est ce que tu paies pour une part sur ce marché, et c'est le prix affiché sur le graphique. Le montant est l'argent que tu mets. Le montant minimum est de 5 $, et il n'y a pas de montant maximum. Dis ton côté, ton prix et ton montant à la voix, et je relirai tout avant qu'il ne se passe quoi que ce soit."
             has("après avoir dit oui", "apres avoir dit oui", "après confirmation") ->
                 "Quand tu dis oui, l'ordre est exécuté et la position est à toi jusqu'au règlement ou une vente anticipée. Si tu dis non, rien ne se passe."
-            // QUESTION FOR FLINT: exact payout timing and payout coin are not confirmed yet.
+            has("portefeuille", "positions", "portfolio") && has("comment", "où", "ou", "voir", "quel") ->
+                "Ton portefeuille est dans l'onglet Portefeuille. Il affiche ton solde et tes positions. Il est vide tant que tu ne déposes pas."
             has("règlement", "reglement", "résout", "gains", "payé", "paye") ->
-                "Quand l'événement est décidé, le marché se règle. Une personne décide du résultat, pas la voix ni l'application seule. Les parts gagnantes sont payées et les autres non. Les gains reviennent dans l'application, liée à ton propre portefeuille, car nous ne gardons pas les fonds."
+                "Quand l'événement est décidé, le marché se règle. Une personne décide du résultat, pas l'application seule. Les parts gagnantes sont payées et les autres non. Les gains sont payés en 30 jours, en USDT. Les gains reviennent dans l'application, liée à ton propre portefeuille, car nous ne gardons pas les fonds."
             has("positions ouvertes", "ma position", "mes positions") ->
                 "Tu peux me demander quelles positions tu as ouvertes. Je peux te dire le marché, le côté choisi, le montant mis et si la position est encore ouverte. Si je n'ai pas de données en direct maintenant, je te dirai que je ne vois aucune position ouverte."
             has("passe cet ordre maintenant") ->
@@ -311,9 +317,10 @@ private fun platformAnswerTranslated(t: String, language: VoiceLanguage): String
                 "Preço é o que você paga por uma cota nesse mercado, e é o preço que aparece no gráfico. Valor é quanto dinheiro você coloca. O valor mínimo é $5 e não há valor máximo. Diga o lado, o preço e o valor na sua ordem de voz, e eu leio tudo de volta antes de qualquer coisa acontecer."
             has("depois de dizer sim", "após confirmar", "apos confirmar") ->
                 "Quando você diz sim, a ordem é executada e a posição é sua até o mercado resolver ou você vender antes. Se disser não, nada acontece."
-            // QUESTION FOR FLINT: exact payout timing and payout coin are not confirmed yet.
+            has("carteira", "posições", "posicoes", "portfolio") && has("como", "onde", "ver", "qual") ->
+                "Sua carteira fica na aba Carteira. Ela mostra seu saldo e suas posições. Fica vazia até você depositar."
             has("resolve", "liquidação", "liquidacao", "ganhos", "receber", "pago") ->
-                "Quando o evento é decidido, o mercado se resolve. Uma pessoa decide o resultado, não a voz nem o app sozinho. As cotas vencedoras são pagas e as outras não. Os ganhos voltam para você no app, ligado à sua própria carteira, porque não guardamos fundos."
+                "Quando o evento é decidido, o mercado se resolve. Uma pessoa decide o resultado, não o app sozinho. As cotas vencedoras são pagas e as outras não. Os ganhos são pagos em 30 dias, em USDT. Os ganhos voltam para você no app, ligado à sua própria carteira, porque não guardamos fundos."
             has("posições abertas", "posicoes abertas", "minha posição", "minha posicao") ->
                 "Você pode me perguntar quais posições tem abertas. Posso dizer o mercado, o lado escolhido, o valor colocado e se ainda está aberta. Se não houver dados ao vivo agora, vou dizer que não consigo ver uma posição aberta."
             has("faça essa ordem agora", "faca essa ordem agora") ->
@@ -347,9 +354,10 @@ private fun platformAnswerTranslated(t: String, language: VoiceLanguage): String
                 "Der Preis ist das, was du für einen Anteil in diesem Markt zahlst, und es ist der Preis, der im Diagramm angezeigt wird. Der Betrag ist das Geld, das du einsetzt. Der Mindestbetrag ist 5 $ und es gibt keinen Höchstbetrag. Sag deine Seite, deinen Preis und deinen Betrag per Sprache, und ich lese alles vor, bevor etwas passiert."
             has("nachdem ich ja sage", "nach dem ja", "nach bestätigung") ->
                 "Wenn du ja sagst, wird der Auftrag ausgeführt und die Position gehört dir bis zur Abrechnung oder bis du vorher verkaufst. Wenn du nein sagst, passiert nichts."
-            // QUESTION FOR FLINT: exact payout timing and payout coin are not confirmed yet.
+            has("portfolio", "positionen") && has("wie", "wo", "sehen", "was") ->
+                "Dein Portfolio ist auf dem Tab Portfolio. Es zeigt dein Guthaben und deine Positionen. Es ist leer, bis du einzahlst."
             has("abrechnung", "auflöst", "auflost", "gewinn", "auszahlung", "bezahlt") ->
-                "Wenn das Ereignis entschieden ist, wird der Markt abgerechnet. Ein Mensch entscheidet das Ergebnis, nicht die Stimme und nicht die App allein. Gewinnende Anteile werden ausgezahlt, die anderen nicht. Gewinne gehen in der App an dich zurück, verbunden mit deiner eigenen Wallet, weil wir keine Gelder halten."
+                "Wenn das Ereignis entschieden ist, wird der Markt abgerechnet. Ein Mensch entscheidet das Ergebnis, nicht die App allein. Gewinnende Anteile werden ausgezahlt, die anderen nicht. Gewinne werden in 30 Tagen in USDT ausgezahlt. Gewinne gehen in der App an dich zurück, verbunden mit deiner eigenen Wallet, weil wir keine Gelder halten."
             has("offene positionen", "meine position", "welche positionen") ->
                 "Du kannst mich fragen, welche Positionen du offen hast. Ich kann dir den Markt, deine Seite, deinen Betrag und den Status nennen. Wenn ich gerade keine Live-Daten für dich habe, sage ich dir, dass ich keine offene Position sehe."
             has("führe diesen trade jetzt aus") ->
@@ -383,9 +391,10 @@ private fun platformAnswerTranslated(t: String, language: VoiceLanguage): String
                 "Fiyat o piyasada bir pay için ödediğin tutardır, ve grafikte gösterilen fiyattır. Miktar koyduğun paradır. En küçük tutar 5 dolardır ve en büyük tutar yoktur. Sesli emrinde tarafını, fiyatını ve miktarını söyle, herhangi bir şey olmadan önce hepsini sana geri okurum."
             has("evet dedikten sonra", "onayladıktan sonra", "onayladiktan sonra") ->
                 "Evet dersen emir gerçekleşir ve piyasa sonuçlanana ya da sen erken satana kadar pozisyon senin olur. Hayır dersen hiçbir şey olmaz."
-            // QUESTION FOR FLINT: exact payout timing and payout coin are not confirmed yet.
+            has("portföy", "portfoy", "pozisyon", "portfolio") && has("nasıl", "nasil", "nerede", "gör", "gor") ->
+                "Portföyün Portföy sekmesinde yer alır. Bakiyeni ve pozisyonlarını gösterir. Yatırım yapana kadar boştur."
             has("sonuçlanır", "sonuclanir", "kazanç", "kazanc", "ödeme", "odeme") ->
-                "Olay kesinleştiğinde piyasa sonuçlanır. Sonuca ses ya da uygulama değil, bir insan karar verir. Kazanan paylara ödeme yapılır, diğerlerine yapılmaz. Kazançlar uygulamada kendi cüzdanına bağlı olarak sana döner, çünkü fon tutmayız."
+                "Olay kesinleştiğinde piyasa sonuçlanır. Sonuca uygulama tek başına değil, bir insan karar verir. Kazanan paylara ödeme yapılır, diğerlerine yapılmaz. Kazançlar 30 gün içinde USDT olarak ödenir. Kazançlar uygulamada kendi cüzdanına bağlı olarak sana döner, çünkü fon tutmayız."
             has("açık pozisyon", "acik pozisyon", "pozisyonlarım", "pozisyonlarim") ->
                 "Hangi açık pozisyonların olduğunu bana sorabilirsin. Sana piyasayı, seçtiğin tarafı, koyduğun miktarı ve hala açık olup olmadığını söyleyebilirim. Şu an canlı pozisyon verin yoksa açık pozisyon göremediğimi söylerim."
             has("bu işlemi şimdi yap") ->
@@ -419,9 +428,10 @@ private fun platformAnswerTranslated(t: String, language: VoiceLanguage): String
                 "السعر هو ما تدفعه مقابل سهم واحد في ذلك السوق، وهو السعر الظاهر على الرسم البياني. المبلغ هو المال الذي تضعه. الحد الأدنى للمبلغ هو 5 دولارات ولا يوجد حد أقصى. قل الاتجاه والسعر والمبلغ في أمرك الصوتي وسأقرأ كل شيء قبل حدوث أي شيء."
             has("بعد أن أقول نعم", "بعد قول نعم", "بعد التأكيد") ->
                 "عندما تقول نعم ينفذ الأمر ويصبح المركز لك حتى تسوية السوق أو بيعه مبكرا. إذا قلت لا فلن يحدث شيء."
-            // QUESTION FOR FLINT: exact payout timing and payout coin are not confirmed yet.
+            has("محفظتي", "مراكزي", "portfolio") && !t.contains("ربط") ->
+                "محفظتك موجودة في تبويب المحفظة. تعرض رصيدك ومراكزك وتبقى فارغة حتى تقوم بالإيداع."
             has("تسوية", "الأرباح", "أربح", "دفع") ->
-                "عندما يتقرر الحدث تتم تسوية السوق. الإنسان يقرر النتيجة وليس الصوت ولا التطبيق وحده. الأسهم الرابحة تدفع والأخرى لا. تعود الأرباح إليك في التطبيق المرتبط بمحفظتك الخاصة لأننا لا نحتفظ بالأموال."
+                "عندما يتقرر الحدث تتم تسوية السوق. الإنسان يقرر النتيجة وليس التطبيق وحده. الأسهم الرابحة تدفع والأخرى لا. تدفع الأرباح خلال 30 يوما بعملة USDT. تعود الأرباح إليك في التطبيق المرتبط بمحفظتك الخاصة لأننا لا نحتفظ بالأموال."
             has("مراكزي المفتوحة", "مركز مفتوح") ->
                 "يمكنك أن تسألني عن مراكزك المفتوحة. يمكنني إخبارك بالسوق والاتجاه والمبلغ وهل ما زال مفتوحا. إذا لم تتوفر بيانات مباشرة الآن فسأقول لك إنني لا أرى مركزا مفتوحا."
             has("نفذ الصفقة الآن") ->
@@ -455,9 +465,10 @@ VoiceLanguage.IGBO -> when {
         "Ọnụ ahịa bụ ihe ị na-akwụ maka otu share n'ahịa ahụ, ọ bụkwa ọnụ ahịa egosiri na chaatị ahụ. Ego bụ ego ole ị tinyere. Ego kacha nta bụ $5, enweghịkwa ego kacha ibu. Kwuo akụkụ gị, ọnụ ahịa, na ego n'iwu olu gị, aga m agụghachi ha niile tupu ihe ọ bụla emee."
     has("mgbe m kwuru ee", "after i say yes") ->
         "Mgbe ị kwuo ee, a ga-eme iwu ahụ ma ọnọdụ ahụ bụrụ nke gị ruo mgbe ahịa mechiri ma ọ bụ ị ree ya n'oge. Ọ bụrụ na ị kwuo mba, ọ dịghị ihe ga-eme."
-    // QUESTION FOR FLINT: exact payout timing and payout coin are not confirmed yet.
+    has("portfolio", "akpa ego") && has("kedu", "gịnị", "gini", "olee", "how") ->
+        "Portfolio gị dị na taabụ Portfolio. Ọ na-egosi ego gị na ọnọdụ gị. Ọ dị tọgbọrọ chakoo ruo mgbe ị tinyere ego."
     has("mechie ahịa", "mmeri", "kwụọ ụgwọ", "settle", "paid") ->
-        "Mgbe e kpebiri ihe omume ahụ, ahịa na-emechi. Mmadụ na-ekpebi nsonaazụ ya, ọ bụghị olu ma ọ bụ ngwa ahụ naanị ya. A na-akwụ ụgwọ maka share meriri, ndị ọzọ anaghị enweta. Ego mmeri na-alọghachiri gị n'ime ngwa ahụ jikọtara na akpa ego gị, n'ihi na anyị anaghị ejide ego."
+        "Mgbe e kpebiri ihe omume ahụ, ahịa na-emechi. Mmadụ na-ekpebi nsonaazụ ya, ọ bụghị ngwa ahụ naanị ya. A na-akwụ ụgwọ maka share meriri, ndị ọzọ anaghị enweta. A na-akwụ ego mmeri n'ime ụbọchị 30, na USDT. Ego mmeri na-alọghachiri gị n'ime ngwa ahụ jikọtara na akpa ego gị, n'ihi na anyị anaghị ejide ego."
     has("ọnọdụ mepere emepe", "open position", "positions") ->
         "Ị nwere ike ịjụ m ọnọdụ ndị mepere emepe i nwere. Enwere m ike ịgwa gị ahịa, akụkụ ị họọrọ, ego ị tinyere, ma ọ ka mepere emepe. Ọ bụrụ na enweghị m data ugbu a, aga m agwa gị na ahụghị m ọnọdụ mepere emepe."
     has("mee ahịa a ugbu a", "place this trade") ->
@@ -492,9 +503,10 @@ VoiceLanguage.YORUBA -> when {
         "Idiyele ni ohun ti o san fun ipin kan ninu ọja yẹn, ati pe o jẹ idiyele ti a fi han lori apẹrẹ naa. Iye owo ni owo ti o fi sinu rẹ. Iye owo ti o kere julọ jẹ $5, ko si iye owo ti o pọ julọ. Sọ ẹgbẹ rẹ, idiyele, ati iye owo ninu aṣẹ ohun rẹ, ma ka gbogbo rẹ pada ki ohunkohun to ṣẹlẹ."
     has("lẹhin ti mo ba sọ bẹẹni", "after i say yes") ->
         "Nigba ti o ba sọ bẹẹni, aṣẹ naa yoo ṣiṣẹ ati pe ipo naa jẹ tirẹ titi ọja yoo fi pari tabi ti o ba ta a ni kutukutu. Ti o ba sọ rara, ko si ohun ti yoo ṣẹlẹ."
-    // QUESTION FOR FLINT: exact payout timing and payout coin are not confirmed yet.
+    has("portfolio", "apamọwọ", "apamowo") && has("bawo", "kini", "ibo", "how") ->
+        "Portfolio rẹ wa lori taabụ Portfolio. O n fi iwọntunwọnsi ati awọn ipo rẹ han. Ko si nkan ninu rẹ titi o fi fi owo sii."
     has("pari", "ere", "sanwo", "settle", "paid") ->
-        "Nigba ti a ba pinnu iṣẹlẹ naa, ọja yoo pari. Eniyan lo n pinnu abajade, kii ṣe ohun tabi app nikan. A o sanwo fun awọn ipin ti o ṣẹgun, awọn iyoku kii gba owo. Ere rẹ yoo pada si ọ ninu app ti o sopọ mọ apamọwọ rẹ, nitori a kii di owo mu."
+        "Nigba ti a ba pinnu iṣẹlẹ naa, ọja yoo pari. Eniyan lo n pinnu abajade, kii ṣe app nikan. A o sanwo fun awọn ipin ti o ṣẹgun, awọn iyoku kii gba owo. A n san ere ni ọjọ 30, ninu USDT. Ere rẹ yoo pada si ọ ninu app ti o sopọ mọ apamọwọ rẹ, nitori a kii di owo mu."
     has("ipo ti o ṣii", "open position", "positions") ->
         "O le beere lọwọ mi iru awọn ipo ti o ṣii. Mo le sọ ọja naa, ẹgbẹ ti o yan, iye owo ti o fi sinu rẹ, ati boya o ṣi ṣii. Ti mi o ba ni data ipo lọwọlọwọ, ma sọ fun ọ pe mi o ri ipo ti o ṣii."
     has("ṣe iṣowo yii bayii", "place this trade") ->
@@ -529,9 +541,10 @@ VoiceLanguage.HAUSA -> when {
         "Farashi shine abin da kake biya na rabo daya a wannan kasuwar, kuma shine farashin da aka nuna a kan jadawalin. Adadi shine kudin da ka saka. Mafi karancin adadi shine $5, kuma babu mafi girma. Fadi bangarenka, farashi, da adadi a odarka ta murya, zan karanta komai kafin wani abu ya faru."
     has("bayan na ce eh", "after i say yes") ->
         "Idan ka ce eh, odar za ta cika kuma matsayin ya zama naka har kasuwa ta rufe ko ka sayar da wuri. Idan ka ce a'a, babu abin da zai faru."
-    // QUESTION FOR FLINT: exact payout timing and payout coin are not confirmed yet.
+    has("portfolio", "walat") && has("yaya", "menene", "ina", "how") ->
+        "Portfolio dinka yana kan shafin Portfolio. Yana nuna ma'aunin kudinka da matsayinka. Yana fanko har sai ka saka kudi."
     has("rufe kasuwa", "riba", "biya", "settle", "paid") ->
-        "Idan an yanke hukunci kan lamarin, kasuwa za ta rufe. Mutum ne ke yanke sakamakon, ba murya ba kuma ba app shi kadai ba. Ana biyan rabon da ya yi nasara, sauran ba a biya. Riba za ta koma gare ka a app da ke hade da walat dinka, saboda ba ma rike kudade."
+        "Idan an yanke hukunci kan lamarin, kasuwa za ta rufe. Mutum ne ke yanke sakamakon, ba app shi kadai ba. Ana biyan rabon da ya yi nasara, sauran ba a biya. Ana biyan riba cikin kwanaki 30, a USDT. Riba za ta koma gare ka a app da ke hade da walat dinka, saboda ba ma rike kudade."
     has("matsayi mai bude", "open position", "positions") ->
         "Kana iya tambayata wadanne matsayi ne a bude. Zan iya gaya maka kasuwa, bangaren da ka zaba, adadin da ka saka, da ko har yanzu yana bude. Idan ba ni da bayanan yanzu, zan gaya maka ba na ganin matsayi a bude."
     has("yi wannan ciniki yanzu", "place this trade") ->
@@ -566,9 +579,10 @@ VoiceLanguage.HEBREW -> when {
         "מחיר הוא מה שאתה משלם על מניה אחת באותו שוק, והוא המחיר שמוצג בתרשים. סכום הוא כמה כסף אתה שם. הסכום המינימלי הוא $5, ואין סכום מקסימלי. אמור את הצד, המחיר והסכום בפקודה הקולית, ואני אקריא הכול בחזרה לפני שקורה משהו."
     has("אחרי שאני אומר כן", "לאחר אישור") ->
         "כשאתה אומר כן, הפקודה מתמלאת והפוזיציה שלך עד שהשוק נסגר או שאתה מוכר מוקדם. אם תאמר לא, שום דבר לא קורה."
-    // QUESTION FOR FLINT: exact payout timing and payout coin are not confirmed yet.
+    has("תיק", "פוזיציות", "portfolio") && has("איך", "איפה", "מה") ->
+        "התיק שלך נמצא בלשונית תיק. הוא מציג את היתרה והפוזיציות שלך והוא ריק עד שתפקיד."
     has("נסגר", "זכיות", "תשלום", "משלמים") ->
-        "כשהאירוע מוכרע, השוק נסגר. אדם מכריע את התוצאה, לא הקול ולא האפליקציה לבדה. מניות מנצחות מקבלות תשלום והאחרות לא. הזכיות חוזרות אליך באפליקציה שמחוברת לארנק שלך, כי אנחנו לא מחזיקים בכספים."
+        "כשהאירוע מוכרע, השוק נסגר. אדם מכריע את התוצאה, לא האפליקציה לבדה. מניות מנצחות מקבלות תשלום והאחרות לא. הזכיות משולמות תוך 30 ימים, ב-USDT. הזכיות חוזרות אליך באפליקציה שמחוברת לארנק שלך, כי אנחנו לא מחזיקים בכספים."
     has("פוזיציות פתוחות", "הפוזיציה שלי") ->
         "אתה יכול לשאול אילו פוזיציות פתוחות יש לך. אני יכול לומר לך את השוק, הצד שבחרת, הסכום ששמת ואם היא עדיין פתוחה. אם אין לי נתונים חיים כרגע, אומר לך שאיני רואה פוזיציה פתוחה."
     has("בצע את העסקה עכשיו") ->
@@ -603,9 +617,10 @@ VoiceLanguage.CHINESE -> when {
         "价格是你购买该市场一份份额的费用，就是图表上显示的价格。金额是你投入的资金。最小金额是5美元，没有最大金额。在语音下单时说出方向、价格和金额，我会在任何操作前全部读给你确认。"
     has("说确认之后", "确认后会发生什么") ->
         "你说确认就会成交，仓位归你所有，直到市场结算或你提前卖出。如果你说不，什么都不会发生。"
-    // QUESTION FOR FLINT: exact payout timing and payout coin are not confirmed yet.
+    has("投资组合", "持仓", "portfolio") && has("怎么", "如何", "哪里", "看") ->
+        "你的投资组合在“投资组合”标签页中。它会显示你的余额和持仓。在充值之前里面是空的。"
     has("结算", "盈利", "怎么赔付", "派彩") ->
-        "事件有结果后市场就会结算。结果由人决定，而不是语音或应用自己决定。获胜一方的份额获得派付，另一方没有。收益会回到你绑定自己钱包的应用账户中，因为我们不托管资金。"
+        "事件有结果后市场就会结算。结果由人决定，而不是应用自己决定。获胜一方的份额获得派付，另一方没有。盈利会在 30 天内以 USDT 支付。收益会回到你绑定自己钱包的应用账户中，因为我们不托管资金。"
     has("持仓", "未平仓", "有哪些仓位") ->
         "你可以问我你当前有哪些持仓。我可以告诉你市场、方向、投入金额以及是否仍在持仓中。如果目前没有你的实时持仓数据，我会告诉你暂时看不到持仓。"
     has("现在下单") ->
@@ -667,7 +682,7 @@ TEST CHECKLIST (v1.1.20: trading open for testers; early-sell topic held out on 
    Expected: When you say yes, the order is filled and the position is yours until the market settles or you sell it early. If you say no, nothing happens and no order is placed.
 
 5. User asks: How does a market settle and how do I get paid if I win?
-   Expected: When the event is decided, the market settles. A human decides the result, not the voice and not the app on its own. Winning shares are paid out and losing shares are not. Winnings go back to you in the app, linked to your own wallet, because Prognos Labs is non custodial.
+   Expected: When the event is decided, the market settles. A human decides the result, not the voice and not the app on its own. Winning shares are paid out and losing shares are not. Winnings are paid in 30 days, in USDT. Winnings go back to you in the app, linked to your own wallet, because Prognos Labs is non custodial.
 
 6. User asks: What positions do I have open?
    Expected: You can ask me what positions you have open. I can tell you the market, the side you picked, the amount you put in, and whether it is still open. If I do not have live position data for you right now, I will tell you I cannot see an open position.

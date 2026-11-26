@@ -6,11 +6,9 @@ import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.Handler
 import android.os.Looper
-import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
+import android.os.SystemClock
 import java.io.ByteArrayOutputStream
 import java.util.Locale
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
@@ -44,15 +42,6 @@ data class AsrTranscript(
  * Optional cloud ASR provider for languages where on-device ggml-tiny
  * has low accuracy (e.g. Igbo, Yoruba, Hausa, Hebrew).
  */
-/**
- * Locale for the spoken voice (v1.1.22). Hebrew uses "iw": Android's
- * voice engine still knows it by the old code. Igbo, Yoruba and
- * Hausa have no voice on most phones; the speak call then fails and
- * the text stays on screen instead of crashing.
- */
-fun ttsLocale(language: VoiceLanguage): Locale =
-    if (language == VoiceLanguage.HEBREW) Locale("iw") else Locale(language.code)
-
 fun interface AsrProvider {
     /**
      * Transcribes captured audio. [languageCode] is a hint for the
@@ -68,38 +57,24 @@ class VoiceEngine(
     private val cloudAsr: AsrProvider? = null
 ) {
     sealed class Event {
-        /** Live normalized mic amplitude (0f..1f) for waveform animation. */
         data class Level(val rmsNorm: Float) : Event()
-
-        /** Words heard so far (kept for compatibility). */
         data class Partial(val text: String) : Event()
-
-        /**
-         * Finished utterance with candidates and the captured 16 kHz mono PCM
-         * so the voice-check pass can verify speaker features in a single pass.
-         */
         data class Final(
             val text: String,
             val candidates: List<String> = listOf(text),
             val pcm: ShortArray = shortArrayOf(),
-            /**
-             * Language detected for this spoken turn by Groq or on-device Whisper,
-             * or null when no language signal was returned.
-             */
             val detectedLanguage: VoiceLanguage? = null
         ) : Event()
-
         data class Error(val message: String, val silent: Boolean = false) : Event()
-
         object Unavailable : Event()
     }
 
     companion object {
         val RECOGNITION_LOCALE: Locale = Locale.US
-        // v1.1.22: 800 ms, down from 1,500 ms. The built-in
-        // recognizer already finalizes after 750 ms of silence, so
-        // waiting longer only made the cloud path feel slow.
         const val CAPTURE_SILENCE_TO_STOP_MS = 800L
+        const val CLOUD_MAX_SECONDS = 15
+        const val BASELINE_MIN_RMS = 150.0
+        const val BASELINE_MAX_RMS = 1200.0
 
         fun shouldStopCapture(speechHeard: Boolean, silenceMs: Long): Boolean =
             speechHeard && silenceMs >= CAPTURE_SILENCE_TO_STOP_MS
@@ -113,7 +88,6 @@ class VoiceEngine(
 
     fun setLanguageOverride(language: VoiceLanguage?) {
         overrideLanguage = language
-        tts?.language = recognitionLocale()
     }
 
     fun recognitionLocale(): Locale {
@@ -165,7 +139,7 @@ class VoiceEngine(
     }
 
     fun isAvailable(): Boolean =
-        (cloudAsr != null && voiceLanguage().requiresCloudAsr) ||
+        (cloudAsr != null && voiceLanguage() != VoiceLanguage.IGBO) ||
             whisperModel.isModelReady() ||
             whisperModel.hasBundledModel()
 
@@ -173,23 +147,16 @@ class VoiceEngine(
         this.onEvent = onEvent
         val lang = voiceLanguage()
 
-        // Groq first for every language it supports (Flint, 25 Nov):
-        // the on-device tiny model keeps mishearing him, while Groq
-        // heard him perfectly in the live test. Igbo is never sent:
-        // Whisper has no Igbo. Any cloud miss falls back to on-device
-        // inside startCloudListening, so the phone model is the
-        // fallback now, not the first try.
-        // v1.1.23: only Yoruba, Hausa and Hebrew get a language hint,
-        // because Groq cannot detect them on its own. Every other
-        // language goes with no hint, so Groq detects what was
-        // actually spoken and the app hears any language, not just
-        // the one set in Settings.
-        val cloudLang = if (lang.requiresCloudAsr) lang.code else ""
-        if (lang.code != "ig" && cloudAsr != null) {
-            startCloudListening(cloudLang, onEvent)
+        // Cloud transcriber runs first for every language except Igbo.
+        if (lang != VoiceLanguage.IGBO && cloudAsr != null) {
+            startCloudListening(lang, onEvent)
             return
         }
 
+        startOnDeviceListening(onEvent)
+    }
+
+    private fun startOnDeviceListening(onEvent: (Event) -> Unit) {
         if (!WhisperNative.isAvailable) {
             onEvent(Event.Unavailable)
             return
@@ -207,10 +174,15 @@ class VoiceEngine(
         }
     }
 
-    private fun startCloudListening(langCode: String, onEvent: (Event) -> Unit) {
+    private fun startCloudListening(lang: VoiceLanguage, onEvent: (Event) -> Unit) {
         stopListening()
         listening = true
-        startVoiceCapture(maxSeconds = 15) { sample ->
+        // Only Yoruba, Hausa, and Hebrew send a language hint.
+        val hintCode = when (lang) {
+            VoiceLanguage.YORUBA, VoiceLanguage.HAUSA, VoiceLanguage.HEBREW -> lang.code
+            else -> ""
+        }
+        startVoiceCapture(maxSeconds = CLOUD_MAX_SECONDS) { sample ->
             listening = false
             when (sample) {
                 is VoiceSample.Unavailable -> mainHandler.post { onEvent(Event.Unavailable) }
@@ -220,14 +192,13 @@ class VoiceEngine(
                 is VoiceSample.Captured -> {
                     whisperScope.launch {
                         val result = runCatching {
-                            cloudAsr?.transcribe(sample.pcm, sample.sampleRate, langCode)
+                            cloudAsr?.transcribe(sample.pcm, sample.sampleRate, hintCode)
                         }.getOrNull()
                         val cleaned = result?.text?.let { cleanRecognizedText(it) }
                         withContext(Dispatchers.Main) {
                             if (cleaned.isNullOrBlank()) {
-                                // Cloud heard nothing: fall back to on-device listening
-                                // instead of erroring, so the user just says it again once.
-                                startWhisperListening(onEvent)
+                                // Cloud returned nothing. Fall back to on-device listening.
+                                startOnDeviceListening(onEvent)
                             } else {
                                 onEvent(
                                     Event.Final(
@@ -307,82 +278,9 @@ class VoiceEngine(
         stopCaptureSignal()
     }
 
-    private var tts: TextToSpeech? = null
-    private val speakCallbacks = ConcurrentHashMap<String, () -> Unit>()
-
-    fun speak(text: String) = speakAndThen(text, onDone = {})
-
-    /**
-     * Speaks [text] in the language of this turn. Android's built-in
-     * voice is free and on the phone: no server, no key, no cost.
-     * A language with no voice on the phone (Igbo, Yoruba and Hausa
-     * usually have none) fails the speak call and the text stays on
-     * screen instead; nothing crashes.
-     */
-    fun speak(text: String, language: VoiceLanguage) =
-        speakAndThen(text, language, onDone = {})
-
-    /**
-     * Speaks [text] and invokes [onDone] on the main thread only after playback
-     * finishes (or immediately if TTS is unavailable), preventing TTS-to-mic echo.
-     */
-    fun speakAndThen(text: String, onDone: () -> Unit) {
-        speakAndThen(text, null, onDone)
-    }
-
-    fun speakAndThen(text: String, language: VoiceLanguage?, onDone: () -> Unit) {
-        val utteranceId = "prognos-voice-${System.nanoTime()}"
-        speakCallbacks[utteranceId] = onDone
-        try {
-            val existing = tts
-            if (existing != null) {
-                language?.let { existing.language = ttsLocale(it) }
-                    ?: run { existing.language = recognitionLocale() }
-                val res = existing.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
-                if (res != TextToSpeech.SUCCESS) fireSpeakDone(utteranceId)
-                return
-            }
-            tts = TextToSpeech(context) { status ->
-                if (status == TextToSpeech.SUCCESS) {
-                    language?.let { tts?.language = ttsLocale(it) }
-                        ?: run { tts?.language = recognitionLocale() }
-                    tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                        override fun onStart(id: String?) = Unit
-                        override fun onDone(id: String?) = fireSpeakDone(id)
-                        @Deprecated("Deprecated in Java")
-                        override fun onError(id: String?) = fireSpeakDone(id)
-                        override fun onError(id: String?, errorCode: Int) = fireSpeakDone(id)
-                    })
-                    val res = tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
-                    if (res != TextToSpeech.SUCCESS) fireSpeakDone(utteranceId)
-                } else {
-                    fireSpeakDone(utteranceId)
-                }
-            }
-        } catch (e: Exception) {
-            fireSpeakDone(utteranceId)
-        }
-    }
-
-    private fun fireSpeakDone(id: String?) {
-        if (id == null) return
-        val cb = speakCallbacks.remove(id) ?: return
-        mainHandler.post { cb() }
-    }
-
-    fun stopSpeaking() {
-        speakCallbacks.clear()
-        try {
-            tts?.stop()
-        } catch (e: Exception) {
-            // Never crash on TTS.
-        }
-    }
-
     fun destroy() {
         stopListening()
         stopVoiceCapture()
-        stopSpeaking()
         whisperScope.cancel()
         try {
             whisperRecognizer?.release()
@@ -390,12 +288,6 @@ class VoiceEngine(
             // Already released.
         }
         whisperRecognizer = null
-        try {
-            tts?.shutdown()
-        } catch (e: Exception) {
-            // Already shut down.
-        }
-        tts = null
         captureExecutor?.shutdownNow()
         captureExecutor = null
     }
@@ -409,6 +301,12 @@ class VoiceEngine(
         return ex
     }
 
+    /**
+     * Captures audio using the adaptive noise floor gate:
+     * 250 ms calibration on quiet frames, clamped floor [150, 1200],
+     * threshold max(400, floor * 1.8), and 2 consecutive active frames
+     * before speech starts. Returns NoAudio if no real speech passed the gate.
+     */
     private fun runCapture(minBuf: Int, maxSeconds: Int, session: Int) {
         if (isStaleCaptureSession(session, captureSession)) {
             deliverCapture(session, VoiceSample.NoAudio)
@@ -417,6 +315,16 @@ class VoiceEngine(
         val record = try {
             AudioRecord(
                 MediaRecorder.AudioSource.VOICE_RECOGNITION,
+                sampleRate,
+                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_16BIT,
+                minBuf * 2
+            )
+        } catch (e: Exception) {
+            null
+        } ?: try {
+            AudioRecord(
+                MediaRecorder.AudioSource.MIC,
                 sampleRate,
                 AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT,
@@ -445,28 +353,55 @@ class VoiceEngine(
         audioOk = true
         val buf = ByteArray(minBuf)
         val maxBytes = sampleRate * 2 * 30
-        val startedMs = android.os.SystemClock.uptimeMillis()
+        val startedMs = SystemClock.uptimeMillis()
         var speechHeard = false
+        var onsetStreak = 0
         var lastSpeechMs = startedMs
+        var baselineSum = 0.0
+        var baselineCount = 0
+        var baselineRms = WhisperRecognizer.SILENCE_RMS / WhisperRecognizer.NOISE_FLOOR_MULTIPLIER
 
         while (capturing.get()) {
             if (isStaleCaptureSession(session, captureSession)) break
-            if (android.os.SystemClock.uptimeMillis() - startedMs >= maxSeconds * 1000L) break
+            val nowMs = SystemClock.uptimeMillis()
+            if (nowMs - startedMs >= maxSeconds * 1000L) break
             val read = try {
                 record.read(buf, 0, buf.size)
             } catch (e: Exception) {
                 break
             }
             if (read <= 0) break
-            val nowMs = android.os.SystemClock.uptimeMillis()
-            if (!WhisperRecognizer.isSilent(WhisperRecognizer.rmsOf(bytesToShorts(buf, read)))) {
-                speechHeard = true
-                lastSpeechMs = nowMs
+
+            val shorts = bytesToShorts(buf, read)
+            val rms = WhisperRecognizer.rmsOf(shorts)
+
+            // Calibrate room noise during the first 250 ms using quiet frames only
+            // so a loud first frame does not poison the floor.
+            if (!speechHeard && nowMs - startedMs < WhisperRecognizer.CALIBRATION_MS) {
+                if (rms <= BASELINE_MAX_RMS) {
+                    baselineSum += rms
+                    baselineCount++
+                    baselineRms = (baselineSum / baselineCount).coerceIn(BASELINE_MIN_RMS, BASELINE_MAX_RMS)
+                }
+                continue
             }
-            if (shouldStopCapture(speechHeard, nowMs - lastSpeechMs)) break
-            synchronized(captureLock) {
-                if (!isStaleCaptureSession(session, captureSession) && capturedBytes.size() < maxBytes) {
-                    capturedBytes.write(buf, 0, minOf(read, maxBytes - capturedBytes.size()))
+
+            if (!WhisperRecognizer.isSilentAdaptive(rms, baselineRms)) {
+                onsetStreak++
+                if (onsetStreak >= WhisperRecognizer.ONSET_FRAMES_REQUIRED) {
+                    speechHeard = true
+                    lastSpeechMs = nowMs
+                }
+            } else {
+                onsetStreak = 0
+            }
+
+            if (speechHeard && shouldStopCapture(speechHeard, nowMs - lastSpeechMs)) break
+            if (speechHeard) {
+                synchronized(captureLock) {
+                    if (!isStaleCaptureSession(session, captureSession) && capturedBytes.size() < maxBytes) {
+                        capturedBytes.write(buf, 0, minOf(read, maxBytes - capturedBytes.size()))
+                    }
                 }
             }
         }
@@ -477,7 +412,7 @@ class VoiceEngine(
         }
         record.release()
         val bytes = synchronized(captureLock) { capturedBytes.toByteArray() }
-        if (audioOk && bytes.isNotEmpty()) {
+        if (audioOk && speechHeard && bytes.isNotEmpty()) {
             deliverCapture(session, VoiceSample.Captured(bytesToShorts(bytes), sampleRate))
         } else {
             deliverCapture(session, VoiceSample.NoAudio)
@@ -516,4 +451,3 @@ class VoiceEngine(
         return out
     }
 }
-

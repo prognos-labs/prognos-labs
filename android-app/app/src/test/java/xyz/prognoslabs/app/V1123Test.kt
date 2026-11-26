@@ -38,8 +38,8 @@ class V1123Test {
     @Test
     fun versionIs1123() {
         val gradle = readSource("app/build.gradle.kts")
-        assertTrue(gradle.contains("versionCode = 33"))
-        assertTrue(gradle.contains("versionName = \"1.1.23\""))
+        assertTrue(gradle.contains("versionCode = 34"))
+        assertTrue(gradle.contains("versionName = \"1.1.24\""))
     }
 
     // ---- The hint: only the languages Groq cannot detect ----
@@ -71,7 +71,7 @@ class V1123Test {
         val engine = readSource(
             "app/src/main/java/xyz/prognoslabs/app/ui/VoiceEngine.kt"
         )
-        assertTrue(engine.contains("if (lang.requiresCloudAsr) lang.code else \"\""))
+        assertTrue(engine.contains("VoiceLanguage.YORUBA, VoiceLanguage.HAUSA, VoiceLanguage.HEBREW -> lang.code"))
         val provider = readSource(
             "app/src/main/java/xyz/prognoslabs/app/voice/GroqAsrProvider.kt"
         )

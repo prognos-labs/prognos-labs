@@ -706,6 +706,10 @@ private fun parseVoiceQuestion(
     val nav = parseNavigation(lower, markets, language)
     if (nav != null) return nav
 
+    if (isPortfolioQuestion(lower, language)) {
+        return VoiceParseResult.Navigate("portfolio", "your portfolio")
+    }
+
     when {
         containsAnyWord(lower, vocab.balanceWords) -> return VoiceParseResult.Question(VoiceQuestion.Balance, text)
         containsAnyWord(lower, vocab.priceWords) -> {
@@ -753,6 +757,82 @@ internal fun looksTruncated(lower: String, language: VoiceLanguage = VoiceLangua
     if (words.size < 3) return true
     val last = words.last().trimEnd('?', '.', ',', '!')
     return last in vocabFor(language).truncatedTailWords
+}
+
+/** True when the user is asking to see the portfolio, in any
+ * supported language. "Can I see my portfolio" never reached
+ * navigation, because "see" is not a navigation verb, so it was
+ * refused as out of scope. */
+private fun isPortfolioQuestion(lower: String, language: VoiceLanguage): Boolean {
+    val phrases = when (language) {
+        VoiceLanguage.ENGLISH -> setOf(
+            "can i see my portfolio",
+            "show my portfolio",
+            "what is my portfolio",
+            "what's my portfolio",
+            "whats my portfolio",
+            "what is in my portfolio",
+            "what's in my portfolio",
+            "my portfolio"
+        )
+        VoiceLanguage.SPANISH -> setOf(
+            "puedo ver mi cartera",
+            "ver mi cartera",
+            "mi cartera",
+            "mis posiciones",
+            "ver mis posiciones"
+        )
+        VoiceLanguage.FRENCH -> setOf(
+            "voir mon portefeuille",
+            "mon portefeuille",
+            "mes positions",
+            "voir mes positions"
+        )
+        VoiceLanguage.PORTUGUESE -> setOf(
+            "ver minha carteira",
+            "minha carteira",
+            "minhas posições",
+            "minhas posicoes"
+        )
+        VoiceLanguage.GERMAN -> setOf(
+            "mein portfolio",
+            "meine positionen",
+            "portfolio zeigen"
+        )
+        VoiceLanguage.TURKISH -> setOf(
+            "portföyüm",
+            "portfoyum",
+            "pozisyonlarım",
+            "pozisyonlarim"
+        )
+        VoiceLanguage.ARABIC -> setOf(
+            "محفظتي",
+            "مراكزي"
+        )
+        VoiceLanguage.IGBO -> setOf(
+            "portfolio m",
+            "akpa ego m"
+        )
+        VoiceLanguage.YORUBA -> setOf(
+            "portfolio mi",
+            "apamọwọ mi",
+            "apamowo mi"
+        )
+        VoiceLanguage.HAUSA -> setOf(
+            "portfolio dina",
+            "walat dina"
+        )
+        VoiceLanguage.HEBREW -> setOf(
+            "התיק שלי",
+            "הפוזיציות שלי"
+        )
+        VoiceLanguage.CHINESE -> setOf(
+            "我的投资组合",
+            "我的持仓",
+            "投资组合"
+        )
+    }
+    return phrases.any { lower.contains(it) }
 }
 
 /**
