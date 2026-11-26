@@ -154,6 +154,11 @@ fun containsWord(lower: String, word: String): Boolean {
     val normLower = lower.replace('-', ' ')
     val normWord = word.replace('-', ' ')
     if (normWord.contains(' ')) return normLower.contains(normWord)
+    // v1.1.27: Chinese has no spaces between words, so a single
+    // Chinese word never equals a whole token: match it as a
+    // substring instead. Every other language keeps whole-word
+    // matching, so "no" never fires on "know".
+    if (normWord.any { it in '\u4E00'..'\u9FFF' }) return normLower.contains(normWord)
     return tokenize(normLower).any { it.word.lowercase() == normWord }
 }
 
@@ -377,10 +382,106 @@ private val ASSET_PHRASES = mapOf(
     "币安币" to "BNB"
 )
 
-/** The answer when no market for the asset is loaded: a plain yes that names the asset. */
-fun assetAvailableAnswer(asset: String): String {
+/** The answer when no market for the asset is loaded: a plain yes
+ * that names the asset, in the turn language. */
+fun assetAvailableAnswer(asset: String, language: VoiceLanguage = VoiceLanguage.ENGLISH): String {
     val name = ASSET_LABELS[asset] ?: asset
-    return "Yes, $name can be traded on Prognos Labs."
+    return when (language) {
+        VoiceLanguage.ENGLISH -> "Yes, $name can be traded on Prognos Labs."
+        VoiceLanguage.FRENCH -> "Oui, on peut trader $name sur Prognos Labs."
+        VoiceLanguage.SPANISH -> "Sí, $name se puede operar en Prognos Labs."
+        VoiceLanguage.PORTUGUESE -> "Sim, $name pode ser negociado na Prognos Labs."
+        VoiceLanguage.GERMAN -> "Ja, $name kann auf Prognos Labs gehandelt werden."
+        VoiceLanguage.TURKISH -> "Evet, $name Prognos Labs'te alınıp satılabilir."
+        VoiceLanguage.ARABIC -> "نعم، يمكن تداول $name على Prognos Labs."
+        VoiceLanguage.YORUBA -> "Bẹẹni, a le ṣowo $name lori Prognos Labs."
+        VoiceLanguage.HAUSA -> "Eh, ana iya ciniki $name a Prognos Labs."
+        VoiceLanguage.HEBREW -> "כן, אפשר לסחור ב$name ב-Prognos Labs."
+        VoiceLanguage.CHINESE -> "可以，$name可以在Prognos Labs上交易。"
+        VoiceLanguage.IGBO -> "Ee, a pụrụ ịzụ ahịa $name na Prognos Labs."
+    }
+}
+
+/**
+ * Words for trading itself in one language: the verb "to trade"
+ * and the noun "trading", not the buy and sell verbs, which the
+ * vocab already holds. A bare "can I trade Bitcoin" names no buy
+ * or sell verb, so without these the question has no trading word
+ * at all and falls through to the refusal. Each language lists its
+ * own spellings, with and without accents, the way the vocab does.
+ */
+private fun tradeWords(language: VoiceLanguage): Set<String> = when (language) {
+    VoiceLanguage.ENGLISH -> setOf("trade", "trading")
+    VoiceLanguage.FRENCH -> setOf("trader", "trading", "négocier", "negocier", "échanger", "echanger")
+    VoiceLanguage.SPANISH -> setOf("operar", "comerciar", "negociar", "trade", "trading")
+    VoiceLanguage.PORTUGUESE -> setOf("negociar", "operar", "trade", "trading")
+    VoiceLanguage.GERMAN -> setOf("handeln", "traden", "trading", "tauschen")
+    VoiceLanguage.TURKISH -> setOf("trade", "trading", "işlem", "islem", "alım satım", "alim satim", "al sat")
+    VoiceLanguage.ARABIC -> setOf("تداول", "التداول", "أتداول", "اتداول", "تداولات")
+    VoiceLanguage.YORUBA -> setOf("ṣowo", "sowo", "iṣowo", "isowo")
+    VoiceLanguage.HAUSA -> setOf("ciniki", "kasuwanci")
+    VoiceLanguage.HEBREW -> setOf("לסחור", "מסחר", "סחר")
+    VoiceLanguage.CHINESE -> setOf("交易", "买卖")
+    VoiceLanguage.IGBO -> setOf("ịzụ ahịa", "izu ahia", "ahịa", "ahia")
+}
+
+/**
+ * "Can I trade" in one language, for the HowToTrade branch: the
+ * question form that needs no "how" word. Each language brings
+ * its own phrasing, with and without accents.
+ */
+private fun canTradePhrases(language: VoiceLanguage): Set<String> = when (language) {
+    VoiceLanguage.ENGLISH -> setOf("can i trade")
+    VoiceLanguage.FRENCH -> setOf("puis-je trader", "puis je trader", "je peux trader", "peut-on trader", "on peut trader")
+    VoiceLanguage.SPANISH -> setOf("puedo operar", "puedo comerciar", "puedo negociar", "se puede operar")
+    VoiceLanguage.PORTUGUESE -> setOf("posso negociar", "posso operar", "posso trader", "consigo negociar")
+    VoiceLanguage.GERMAN -> setOf("kann ich handeln", "kann ich traden", "kann man handeln")
+    VoiceLanguage.TURKISH -> setOf("trade yapabilir miyim", "işlem yapabilir miyim", "islem yapabilir miyim", "al sat yapabilir miyim")
+    VoiceLanguage.ARABIC -> setOf("هل يمكنني التداول", "هل أستطيع التداول", "هل استطيع التداول", "يمكنني التداول")
+    VoiceLanguage.YORUBA -> setOf("ṣe mo le ṣowo", "se mo le sowo", "ṣe mo le ra", "se mo le ra")
+    VoiceLanguage.HAUSA -> setOf("zan iya ciniki", "zan iya saya", "ina iya ciniki")
+    VoiceLanguage.HEBREW -> setOf("האם אני יכול לסחור", "אני יכול לסחור", "אפשר לסחור")
+    VoiceLanguage.CHINESE -> setOf("我可以交易吗", "我可以交易", "可以交易吗")
+    VoiceLanguage.IGBO -> setOf("enwere m ike ịzụ ahịa", "enwere m ike izu ahia", "m nwere ike ịzụ ahịa", "m nwere ike izu ahia")
+}
+
+/**
+ * "In" or "on Prognos Labs" in one language. Matched as a plain
+ * substring, because every phrase carries the brand name, so a
+ * false hit is not possible. Turkish and Hebrew glue the
+ * preposition onto the name, so those forms are listed as written.
+ */
+private fun inPrognosPhrases(language: VoiceLanguage): Set<String> = when (language) {
+    VoiceLanguage.ENGLISH -> setOf("in prognos", "on prognos")
+    VoiceLanguage.FRENCH -> setOf("sur prognos", "dans prognos", "chez prognos")
+    VoiceLanguage.SPANISH -> setOf("en prognos")
+    VoiceLanguage.PORTUGUESE -> setOf("na prognos", "em prognos", "no prognos")
+    VoiceLanguage.GERMAN -> setOf("bei prognos", "auf prognos", "in prognos")
+    VoiceLanguage.TURKISH -> setOf("prognos'ta", "prognos’ta", "prognosta", "prognos'te", "prognoste", "prognos labs'ta", "prognos labs’ta", "prognos labs'te", "prognos labs’te")
+    VoiceLanguage.ARABIC -> setOf("في prognos", "على prognos", "في بروغنوس", "على بروغنوس")
+    VoiceLanguage.YORUBA -> setOf("ni prognos", "lori prognos", "ninu prognos")
+    VoiceLanguage.HAUSA -> setOf("a prognos", "cikin prognos")
+    VoiceLanguage.HEBREW -> setOf("בprognos", "בפרוגנוס", "על prognos")
+    VoiceLanguage.CHINESE -> setOf("在prognos", "在 prognos", "prognos上", "prognos上有")
+    VoiceLanguage.IGBO -> setOf("na prognos", "n'ime prognos", "nime prognos")
+}
+
+/** The "is" / "are" question starter in one language, for "is X
+ * on Prognos Labs". Chinese needs none: "in Prognos" already
+ * catches it. */
+private fun isAreStarters(language: VoiceLanguage): Set<String> = when (language) {
+    VoiceLanguage.ENGLISH -> setOf("is ", "are ")
+    VoiceLanguage.FRENCH -> setOf("est-ce", "est-il", "est-elle", "est ")
+    VoiceLanguage.SPANISH -> setOf("está ", "esta ", "hay ")
+    VoiceLanguage.PORTUGUESE -> setOf("está ", "esta ", "há ", "ha ", "tem ")
+    VoiceLanguage.GERMAN -> setOf("ist ", "gibt es ")
+    VoiceLanguage.TURKISH -> setOf("var mı", "var mi")
+    VoiceLanguage.ARABIC -> setOf("هل ")
+    VoiceLanguage.YORUBA -> setOf("ṣe ", "se ", "ǹjẹ́ ", "nje ")
+    VoiceLanguage.HAUSA -> setOf("shin ", "akwai ")
+    VoiceLanguage.HEBREW -> setOf("האם ")
+    VoiceLanguage.CHINESE -> emptySet()
+    VoiceLanguage.IGBO -> setOf("ọ bụ ", "o bu ", "enwere ")
 }
 
 /**
@@ -389,22 +490,25 @@ fun assetAvailableAnswer(asset: String): String {
  * no branch answers whether an asset is on Prognos Labs, and the
  * price, news and market branches all need their own trigger
  * words. An asset is named and the sentence asks whether it can
- * be traded here or is on Prognos Labs. English only for now; the
- * other languages keep their current behaviour. A "how" question
- * is not availability, it is HowToTrade, so it is excluded here.
+ * be traded here or is on Prognos Labs.
+ * v1.1.27: the same question in any of the 12 languages. The
+ * v1.1.26 branch was English only, so a Portuguese "Posso
+ * negociar Bitcoin?" still got the Portuguese refusal: no
+ * translated knowledge topic catches a bare "can I trade" either.
+ * A "how" question is not availability, it is HowToTrade, so it
+ * is excluded here.
  */
 private fun isAssetAvailabilityQuestion(
     lower: String,
     mention: Pair<String, Int>?,
     language: VoiceLanguage
 ): Boolean {
-    if (language != VoiceLanguage.ENGLISH) return false
     if (mention == null) return false
     if (lower.contains(howWord(language))) return false
-    if (lower.contains("trade") || lower.contains("trading")) return true
-    if (lower.contains("in prognos") || lower.contains("on prognos")) return true
+    if (containsAnyWord(lower, tradeWords(language))) return true
+    if (inPrognosPhrases(language).any { lower.contains(it) }) return true
     val trimmed = lower.trim()
-    if ((trimmed.startsWith("is ") || trimmed.startsWith("are ")) && lower.contains("prognos")) return true
+    if (isAreStarters(language).any { trimmed.startsWith(it) } && lower.contains("prognos")) return true
     return false
 }
 
@@ -788,14 +892,13 @@ private fun parseVoiceQuestion(
             val m = mentionedMarket
             if (m != null) return VoiceParseResult.Question(VoiceQuestion.MarketInfo(m.id), text)
             return VoiceParseResult.Question(
-                VoiceQuestion.Knowledge(assetAvailableAnswer(mention!!.first)),
+                VoiceQuestion.Knowledge(assetAvailableAnswer(mention!!.first, language)),
                 text
             )
         }
-        (lower.contains(howWord(language)) ||
-            (language == VoiceLanguage.ENGLISH && lower.contains("can i trade"))) &&
+        (lower.contains(howWord(language)) || containsAnyWord(lower, canTradePhrases(language))) &&
             (containsAnyWord(lower, vocab.buyVerbs) || containsAnyWord(lower, vocab.sellVerbs) ||
-                (language == VoiceLanguage.ENGLISH && lower.contains("trade"))) ->
+                containsAnyWord(lower, tradeWords(language))) ->
             return VoiceParseResult.Question(VoiceQuestion.HowToTrade, text)
         containsAnyWord(lower, vocab.tradingOpenWords) ->
             return VoiceParseResult.Question(VoiceQuestion.TradingOpens, text)

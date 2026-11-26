@@ -76,8 +76,8 @@ class V1111Test {
     @Test
     fun versionIs1123() {
         val gradle = readSource("app/build.gradle.kts")
-        assertTrue(gradle.contains("versionCode = 36"))
-        assertTrue(gradle.contains("versionName = \"1.1.26\""))
+        assertTrue(gradle.contains("versionCode = 37"))
+        assertTrue(gradle.contains("versionName = \"1.1.27\""))
     }
 
     // ---- 1. Listening cuts off mid-sentence ----

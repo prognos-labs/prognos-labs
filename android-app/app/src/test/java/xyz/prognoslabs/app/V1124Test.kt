@@ -39,8 +39,8 @@ class V1124Test {
     @Test
     fun versionIs1124() {
         val gradle = readSource("app/build.gradle.kts")
-        assertTrue(gradle.contains("versionCode = 36"))
-        assertTrue(gradle.contains("versionName = \"1.1.26\""))
+        assertTrue(gradle.contains("versionCode = 37"))
+        assertTrue(gradle.contains("versionName = \"1.1.27\""))
     }
 
     // ---- Direction 3: the portfolio is back ----
