@@ -1,32 +1,32 @@
 package xyz.prognoslabs.app
 
 import java.io.File
-import java.util.Locale
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import xyz.prognoslabs.app.data.VoiceLanguage
 import xyz.prognoslabs.app.data.VoiceParseResult
 import xyz.prognoslabs.app.data.VoiceQuestion
 import xyz.prognoslabs.app.data.parseVoiceUtterance
 import xyz.prognoslabs.app.data.platformAnswer
 import xyz.prognoslabs.app.ui.VoiceEngine
-import xyz.prognoslabs.app.ui.ttsLocale
 
 /**
  * v1.1.22: Flint asked the app "can you take a trade for me" and
  * got the out-of-scope refusal. A bare trade request is a trade to
  * start, not a question to refuse: the voice now answers with the
- * guided trade prompt and keeps listening. Answers and the order
- * read-back are also spoken aloud with the phone's own free voice,
- * and the cloud capture ends after 800 ms of silence instead of
- * 1,500 ms, so the voice answers sooner.
+ * guided trade prompt and keeps listening. The cloud capture ends
+ * after 800 ms of silence instead of 1,500 ms, so the voice answers
+ * sooner.
  *
- * These tests run on the JVM. There is no microphone and no TTS
- * engine here, so the spoken voice is proven through its pure
- * locale helper and the source wiring, and the real proof is still
- * Flint's phone.
+ * v1.1.24: the spoken voice is gone on Flint's order. Answers and
+ * the order read-back are shown on screen instead of spoken aloud,
+ * and the mic reopens right after the text appears. The two old
+ * spoken-voice tests below were updated for that, not deleted:
+ * they now assert the text-and-mic behaviour that replaced speech.
+ *
+ * These tests run on the JVM. There is no microphone and no phone
+ * here, so the voice is proven through pure helpers and source
+ * wiring, and the real proof is still Flint's phone.
  */
 class V1122Test {
 
@@ -103,28 +103,35 @@ class V1122Test {
         assertTrue(parsed is VoiceParseResult.OutOfScope)
     }
 
-    // ---- The spoken voice: free, on the phone ----
+    // ---- v1.1.24: no spoken voice. Answers and the read-back are
+    // shown on screen, and the mic reopens right after. ----
 
     @Test
-    fun ttsLocaleUsesTheOldHebrewCode() {
-        assertEquals(Locale("iw"), ttsLocale(VoiceLanguage.HEBREW))
-        assertEquals(Locale("en"), ttsLocale(VoiceLanguage.ENGLISH))
-        assertEquals(Locale("yo"), ttsLocale(VoiceLanguage.YORUBA))
-        assertEquals(Locale("es"), ttsLocale(VoiceLanguage.SPANISH))
-    }
-
-    @Test
-    fun answersAndReadBackAreSpoken() {
+    fun answersAreShownAsTextNotSpoken() {
         val vm = readSource(
             "app/src/main/java/xyz/prognoslabs/app/ui/AppViewModel.kt"
         )
-        // Answers are spoken in the language of the turn.
-        assertTrue(vm.contains("voiceEngine.speakAndThen(answer, turnLang)"))
-        assertTrue(vm.contains("voiceEngine.speak(answer, turnLang)"))
-        // The order read-back is spoken aloud before the mic opens.
-        assertTrue(vm.contains("Say yes to place it, or no to cancel."))
-        // Hanging up stops any spoken answer at once.
-        assertTrue(vm.contains("voiceEngine.stopSpeaking()"))
+        // A conversational answer is put on the sheet as text.
+        assertTrue(vm.contains("_voiceSheet.value = VoiceSheet.Conversation(answer)"))
+        // The mic reopens right after the text appears.
+        assertTrue(vm.contains("restartListening()"))
+        // Nothing is spoken anywhere in the view model.
+        assertFalse(vm.contains("voiceEngine.speak"))
+        assertFalse(vm.contains("stopSpeaking"))
+    }
+
+    @Test
+    fun orderReadBackIsShownNotSpoken() {
+        val vm = readSource(
+            "app/src/main/java/xyz/prognoslabs/app/ui/AppViewModel.kt"
+        )
+        // The order read-back is a confirm card on screen.
+        assertTrue(vm.contains("_voiceSheet.value = VoiceSheet.Confirm(order, ready)"))
+        // The mic reopens so the user answers it out loud.
+        assertTrue(vm.contains("restartListening()"))
+        // The old spoken read-back is gone.
+        assertFalse(vm.contains("Say yes to place it, or no to cancel."))
+        assertFalse(vm.contains("voiceEngine.speak"))
     }
 
     // ---- Speed: the cloud capture ends sooner ----

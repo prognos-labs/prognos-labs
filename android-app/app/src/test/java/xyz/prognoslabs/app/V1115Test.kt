@@ -22,8 +22,8 @@ class V1115Test {
 
     @Test
     fun versionIs1123() {
-        assertEquals(33, BuildConfig.VERSION_CODE)
-        assertEquals("1.1.23", BuildConfig.VERSION_NAME)
+        assertEquals(34, BuildConfig.VERSION_CODE)
+        assertEquals("1.1.24", BuildConfig.VERSION_NAME)
     }
 
     // ---- Fix 1: the mic is a header button, never floating ----

@@ -163,7 +163,7 @@ class V117Test {
         val checkBody = privateFunBody(vm, "private fun startVoiceCheck(")
         assertTrue("The check pass must show the check sheet", checkBody.contains("VoiceSheet.VoiceCheck"))
         assertTrue("The check pass must pick a fresh challenge phrase", checkBody.contains("pickChallengePhrase"))
-        assertTrue("The check pass must speak the challenge", checkBody.contains("voiceEngine.speak"))
+        assertFalse("The check pass must not speak the challenge", checkBody.contains("voiceEngine.speak"))
         assertTrue("The words pass must listen for the challenge", checkBody.contains("restartListening"))
         val challengeBody = privateFunBody(vm, "private fun processChallengeFinal(")
         assertTrue("The voice pass must record the voice alone", challengeBody.contains("startVoiceCapture"))

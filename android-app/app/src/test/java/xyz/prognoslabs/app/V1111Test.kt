@@ -76,8 +76,8 @@ class V1111Test {
     @Test
     fun versionIs1123() {
         val gradle = readSource("app/build.gradle.kts")
-        assertTrue(gradle.contains("versionCode = 33"))
-        assertTrue(gradle.contains("versionName = \"1.1.23\""))
+        assertTrue(gradle.contains("versionCode = 34"))
+        assertTrue(gradle.contains("versionName = \"1.1.24\""))
     }
 
     // ---- 1. Listening cuts off mid-sentence ----
@@ -263,7 +263,9 @@ class V1111Test {
         assertTrue(vm.contains("challengeMatches(it, challenge, _voiceLanguage.value)"))
         assertTrue(vm.contains("VoiceSheet.VoiceCheck(challenge, VoiceCheckPhase.WORDS)"))
         assertTrue(vm.contains("VoiceSheet.VoiceCheck(challenge, VoiceCheckPhase.VOICE)"))
-        assertTrue(vm.contains("challengeInstructionFirst"))
+        // v1.1.24: the challenge instruction is shown, not spoken,
+        // so the spoken instruction text is gone from the view model.
+        assertFalse(vm.contains("challengeInstructionFirst"))
         assertTrue(vm.contains("AnalyticsEvents.VOICE_CHALLENGE"))
         assertTrue("Two wrong tries refuse the order", vm.contains("voiceChallengeAttempts >= 2"))
     }
