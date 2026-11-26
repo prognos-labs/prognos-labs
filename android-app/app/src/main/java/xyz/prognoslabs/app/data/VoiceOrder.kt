@@ -397,7 +397,7 @@ fun assetAvailableAnswer(asset: String, language: VoiceLanguage = VoiceLanguage.
         VoiceLanguage.YORUBA -> "Bẹẹni, a le ṣowo $name lori Prognos Labs."
         VoiceLanguage.HAUSA -> "Eh, ana iya ciniki $name a Prognos Labs."
         VoiceLanguage.HEBREW -> "כן, אפשר לסחור ב$name ב-Prognos Labs."
-        VoiceLanguage.CHINESE -> "可以，$name可以在Prognos Labs上交易。"
+        VoiceLanguage.CHINESE -> "可以，${name}可以在Prognos Labs上交易。"
         VoiceLanguage.IGBO -> "Ee, a pụrụ ịzụ ahịa $name na Prognos Labs."
     }
 }
