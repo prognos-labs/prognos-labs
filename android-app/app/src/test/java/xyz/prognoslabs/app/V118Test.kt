@@ -117,8 +117,8 @@ class V118Test {
         ).firstOrNull { it.isFile }
             ?: throw AssertionError("Cannot find app/build.gradle.kts from $cwd")
         val text = gradle.readText()
-        assertTrue("versionCode must be 35", text.contains("versionCode = 35"))
-        assertTrue("versionName must be 1.1.25", text.contains("versionName = \"1.1.25\""))
+        assertTrue("versionCode must be 35", text.contains("versionCode = 36"))
+        assertTrue("versionName must be 1.1.26", text.contains("versionName = \"1.1.26\""))
     }
 
     // ---- The per-minute clock ----

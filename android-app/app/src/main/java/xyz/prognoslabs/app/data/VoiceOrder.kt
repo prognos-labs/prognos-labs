@@ -1,5 +1,6 @@
 package xyz.prognoslabs.app.data
 
+import xyz.prognoslabs.app.model.ASSET_LABELS
 import xyz.prognoslabs.app.model.Market
 import xyz.prognoslabs.app.model.parseNum
 
@@ -376,6 +377,37 @@ private val ASSET_PHRASES = mapOf(
     "币安币" to "BNB"
 )
 
+/** The answer when no market for the asset is loaded: a plain yes that names the asset. */
+fun assetAvailableAnswer(asset: String): String {
+    val name = ASSET_LABELS[asset] ?: asset
+    return "Yes, $name can be traded on Prognos Labs."
+}
+
+/**
+ * v1.1.26: "Is Bitcoin in Prognos Labs?" and "Can I trade Bitcoin
+ * on Prognos Labs?" were heard exactly right and still refused:
+ * no branch answers whether an asset is on Prognos Labs, and the
+ * price, news and market branches all need their own trigger
+ * words. An asset is named and the sentence asks whether it can
+ * be traded here or is on Prognos Labs. English only for now; the
+ * other languages keep their current behaviour. A "how" question
+ * is not availability, it is HowToTrade, so it is excluded here.
+ */
+private fun isAssetAvailabilityQuestion(
+    lower: String,
+    mention: Pair<String, Int>?,
+    language: VoiceLanguage
+): Boolean {
+    if (language != VoiceLanguage.ENGLISH) return false
+    if (mention == null) return false
+    if (lower.contains(howWord(language))) return false
+    if (lower.contains("trade") || lower.contains("trading")) return true
+    if (lower.contains("in prognos") || lower.contains("on prognos")) return true
+    val trimmed = lower.trim()
+    if ((trimmed.startsWith("is ") || trimmed.startsWith("are ")) && lower.contains("prognos")) return true
+    return false
+}
+
 /** Where the first asset word sits in the text, if any. */
 fun assetMention(text: String): Pair<String, Int>? {
     val lower = text.lowercase()
@@ -748,7 +780,20 @@ private fun parseVoiceQuestion(
             if (asset != null) return VoiceParseResult.Question(VoiceQuestion.Price(asset), text)
             return VoiceParseResult.AskAgain(vocab.askPrice)
         }
-        lower.contains(howWord(language)) &&
+        isAssetAvailabilityQuestion(lower, mention, language) -> {
+            // v1.1.26: an asset-availability question is a trading
+            // question, not a refusal. A matching loaded market
+            // answers with its market info; with no market loaded
+            // the answer is a plain yes naming the asset.
+            val m = mentionedMarket
+            if (m != null) return VoiceParseResult.Question(VoiceQuestion.MarketInfo(m.id), text)
+            return VoiceParseResult.Question(
+                VoiceQuestion.Knowledge(assetAvailableAnswer(mention!!.first)),
+                text
+            )
+        }
+        (lower.contains(howWord(language)) ||
+            (language == VoiceLanguage.ENGLISH && lower.contains("can i trade"))) &&
             (containsAnyWord(lower, vocab.buyVerbs) || containsAnyWord(lower, vocab.sellVerbs) ||
                 (language == VoiceLanguage.ENGLISH && lower.contains("trade"))) ->
             return VoiceParseResult.Question(VoiceQuestion.HowToTrade, text)

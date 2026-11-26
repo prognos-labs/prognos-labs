@@ -45,8 +45,8 @@ class V1125Test {
     @Test
     fun versionIs1125() {
         val gradle = readSource("app/build.gradle.kts")
-        assertTrue(gradle.contains("versionCode = 35"))
-        assertTrue(gradle.contains("versionName = \"1.1.25\""))
+        assertTrue(gradle.contains("versionCode = 36"))
+        assertTrue(gradle.contains("versionName = \"1.1.26\""))
     }
 
     // ---- Fix 1A: the proxy returns the language (verbose_json) ----
