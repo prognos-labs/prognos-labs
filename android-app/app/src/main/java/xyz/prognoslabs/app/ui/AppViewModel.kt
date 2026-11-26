@@ -91,6 +91,7 @@ import xyz.prognoslabs.app.data.linkPageUrl
 import xyz.prognoslabs.app.data.marketShortLabel
 import xyz.prognoslabs.app.data.orderAmountError
 import xyz.prognoslabs.app.data.parseBestVoiceUtterance
+import xyz.prognoslabs.app.data.parseBestVoiceUtteranceMulti
 import xyz.prognoslabs.app.data.parseConfirmation
 import xyz.prognoslabs.app.data.parseFxRates
 import xyz.prognoslabs.app.data.parseLinkedReturn
@@ -1222,9 +1223,16 @@ private fun restartListening() {
                     return
                 }
                 voiceNoiseRestarts = 0
+                // Clean the candidates in parallel with their
+                // languages, so a dropped candidate cannot shift
+                // the language list out of step with the words.
+                val cleanedPairs = event.candidates.mapIndexedNotNull { i, c ->
+                    cleanRecognizedText(c)?.let { it to event.candidateLanguages.getOrNull(i) }
+                }
                 val cleanedEvent = event.copy(
                     text = cleaned,
-                    candidates = event.candidates.mapNotNull { cleanRecognizedText(it) }
+                    candidates = cleanedPairs.map { it.first },
+                    candidateLanguages = cleanedPairs.mapNotNull { it.second }
                 )
                 // During the challenge pass, a final result is the
                 // user saying the challenge phrase, not a new order.
@@ -1305,10 +1313,27 @@ private fun restartListening() {
         // English and detectedLanguage is null (or English) unless a path
         // truly signals Igbo.
         val setLang = _voiceLanguage.value
-        val turnLang = event.detectedLanguage ?: setLang
-        val (parsed, heard) = parseBestVoiceUtterance(
-            event.candidates, _home.value.markets, _detail.value.market?.id, turnLang
-        )
+        // v1.1.28: when the cloud retry ran, every candidate carries
+        // its own language. Score each in its own language and
+        // answer in the winner's language, so a forced English retry
+        // that wins is answered in English, not in the Portuguese
+        // the detector first reported. Otherwise the old path: one
+        // language for the whole turn.
+        val (parsed, heard, turnLang) =
+            if (event.candidateLanguages.isNotEmpty() &&
+                event.candidateLanguages.size == event.candidates.size
+            ) {
+                parseBestVoiceUtteranceMulti(
+                    event.candidates.zip(event.candidateLanguages),
+                    _home.value.markets, _detail.value.market?.id
+                )
+            } else {
+                val (p, h) = parseBestVoiceUtterance(
+                    event.candidates, _home.value.markets, _detail.value.market?.id,
+                    event.detectedLanguage ?: setLang
+                )
+                Triple(p, h, event.detectedLanguage ?: setLang)
+            }
         // v1.1.15: the words the user just said show as text in the
         // sheet. Partials only arrive while speaking, and a short
         // sentence ends before the first one, so the final result
@@ -1318,8 +1343,21 @@ private fun restartListening() {
             is VoiceParseResult.Order -> startVoiceCheck(heard, parsed.order)
             is VoiceParseResult.Navigate -> {
                 recordVoiceHistory(heard, VoiceHistoryOutcome.NAVIGATED)
+                // v1.1.28: the navigation itself is the confirmation.
+                // The old code left the call view up saying "Opened
+                // ...", so the screen the user asked for was never
+                // visible even though the app had navigated behind
+                // the sheet, and the session never listened again,
+                // so the next thing the user said was never heard
+                // at all. Close the call view, stop listening, and
+                // let the navigation show. The user taps the mic
+                // again to keep talking.
+                listenWatchdogJob?.cancel()
+                voiceSession++
+                voiceEngine.stopListening()
+                voiceEngine.stopVoiceCapture()
+                _voiceSheet.value = null
                 _voiceNavRequest.value = parsed.route
-                _voiceSheet.value = VoiceSheet.Message("Opened ${parsed.label}.")
             }
             is VoiceParseResult.Question -> {
                 // For platform knowledge questions, enforce the exact 3-step fallback:

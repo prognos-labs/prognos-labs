@@ -64,7 +64,17 @@ class VoiceEngine(
             val text: String,
             val candidates: List<String> = listOf(text),
             val pcm: ShortArray = shortArrayOf(),
-            val detectedLanguage: VoiceLanguage? = null
+            val detectedLanguage: VoiceLanguage? = null,
+            /**
+             * The language each candidate was transcribed in, in
+             * the same order as [candidates]. Empty means every
+             * candidate is in the detected language (or the one set
+             * in Settings): the old single-language path. v1.1.28
+             * fills it when the cloud retry ran, so the parser can
+             * score the auto-detected transcript in its language
+             * and the forced retry in the Settings language.
+             */
+            val candidateLanguages: List<VoiceLanguage> = listOf()
         ) : Event()
         data class Error(val message: String, val silent: Boolean = false) : Event()
         object Unavailable : Event()
@@ -72,7 +82,7 @@ class VoiceEngine(
 
     companion object {
         val RECOGNITION_LOCALE: Locale = Locale.US
-        const val CAPTURE_SILENCE_TO_STOP_MS = 800L
+        const val CAPTURE_SILENCE_TO_STOP_MS = 1200L
         const val CLOUD_MAX_SECONDS = 15
 
         /** A captured clip shorter than this is a fragment, not a
@@ -209,12 +219,44 @@ class VoiceEngine(
                                 // another language only returns garbage.
                                 startOnDeviceListening(onEvent, autoDetect = true)
                             } else {
+                                val detected = result?.detectedLanguage
+                                // v1.1.28: the detector can mishear
+                                // accented speech as another language
+                                // entirely. Flint's English "Open my
+                                // portfolio now" came back as
+                                // Portuguese "Ai, mas posso folio
+                                // não", and the app refused it. When
+                                // the detected language is not the
+                                // one set in Settings, run the same
+                                // audio once more forced to the
+                                // Settings language, and hand both
+                                // transcripts to the parser: it scores
+                                // each in its own language and the
+                                // better parse wins. A genuine turn
+                                // in another language still wins its
+                                // tie, because the auto transcript
+                                // comes first. One extra call, only
+                                // on a mismatch, so the free tier is
+                                // not burned on ordinary turns.
+                                var candidates = listOf(cleaned)
+                                var candidateLanguages = listOf<VoiceLanguage>()
+                                if (detected != null && detected != lang && lang != VoiceLanguage.IGBO) {
+                                    val forced = runCatching {
+                                        cloudAsr?.transcribe(sample.pcm, sample.sampleRate, lang.code)
+                                    }.getOrNull()
+                                    val forcedCleaned = forced?.text?.let { cleanRecognizedText(it) }
+                                    if (!forcedCleaned.isNullOrBlank() && forcedCleaned != cleaned) {
+                                        candidates = listOf(cleaned, forcedCleaned)
+                                        candidateLanguages = listOf(detected, lang)
+                                    }
+                                }
                                 onEvent(
                                     Event.Final(
                                         cleaned,
-                                        listOf(cleaned),
+                                        candidates,
                                         sample.pcm,
-                                        detectedLanguage = result?.detectedLanguage
+                                        detectedLanguage = detected,
+                                        candidateLanguages = candidateLanguages
                                     )
                                 )
                             }

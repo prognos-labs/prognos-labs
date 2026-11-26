@@ -38,8 +38,13 @@ class WhisperRecognizer(
         /** Minimum RMS floor for speech detection (16-bit PCM). */
         const val SILENCE_RMS = 400.0
 
-        /** Silence this long after speech ends finalizes the segment. */
-        const val SILENCE_TO_FINAL_MS = 750L
+        /** Silence this long after speech ends finalizes the segment.
+         * v1.1.28: 1200 ms, not 750. A pause between two sentences
+         * ("Good morning. Tell me about Prognos Labs.") is often
+         * 800 ms, and 750 cut the turn after the greeting, so the
+         * question was never heard. The cloud capture waits the
+         * same 1200 ms, so the two paths cannot drift apart. */
+        const val SILENCE_TO_FINAL_MS = 1200L
 
         /** Hard cap on a single utterance segment. */
         const val MAX_SEGMENT_SECONDS = 30

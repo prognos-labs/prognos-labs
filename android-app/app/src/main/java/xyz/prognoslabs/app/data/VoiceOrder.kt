@@ -485,6 +485,28 @@ private fun isAreStarters(language: VoiceLanguage): Set<String> = when (language
 }
 
 /**
+ * "Tell me about" in one language, for the asset question branch:
+ * "tell me about Ethereum" names the coin and asks about it. The
+ * bare word "about" counts in English ("what about Bitcoin?"); in
+ * the other languages only the full phrase counts, so a stray
+ * "about" in another language cannot misfire.
+ */
+private fun tellAboutPhrases(language: VoiceLanguage): Set<String> = when (language) {
+    VoiceLanguage.ENGLISH -> setOf("tell me about", "what about", "about")
+    VoiceLanguage.SPANISH -> setOf("háblame de", "hablame de", "qué hay de", "que hay de", "cuéntame de", "cuentame de")
+    VoiceLanguage.FRENCH -> setOf("parle-moi de", "parle moi de", "dis-moi", "dis moi", "à propos de", "a propos de")
+    VoiceLanguage.PORTUGUESE -> setOf("fale-me sobre", "fale me sobre", "me fale sobre", "me conta sobre", "sobre")
+    VoiceLanguage.GERMAN -> setOf("erzähl mir über", "erzahl mir uber", "erzähle mir über", "was ist mit")
+    VoiceLanguage.TURKISH -> setOf("hakkında anlat", "hakkinda anlat", "hakkında", "hakkinda")
+    VoiceLanguage.ARABIC -> setOf("أخبرني عن", "اخبرني عن", "ماذا عن")
+    VoiceLanguage.IGBO -> setOf("gwa m maka", "banyere")
+    VoiceLanguage.YORUBA -> setOf("sọ fun mi nípa", "so fun mi nipa", "nípa", "nipa")
+    VoiceLanguage.HAUSA -> setOf("faɗa mini game da", "fada mini game da", "game da")
+    VoiceLanguage.HEBREW -> setOf("ספר לי על", "מה עם")
+    VoiceLanguage.CHINESE -> setOf("告诉我", "关于")
+}
+
+/**
  * v1.1.26: "Is Bitcoin in Prognos Labs?" and "Can I trade Bitcoin
  * on Prognos Labs?" were heard exactly right and still refused:
  * no branch answers whether an asset is on Prognos Labs, and the
@@ -524,7 +546,57 @@ fun assetMention(text: String): Pair<String, Int>? {
         val code = ASSET_WORDS[tok.word.lowercase()] ?: continue
         return code to tok.start
     }
+    // v1.1.28: a misheard coin name must still count. Flint's
+    // "Ethereum" came back as "Ecterium" and the app refused the
+    // question because no asset was named. A token that is close to
+    // a coin name counts: edit distance 3 or less, at least 6
+    // letters, same first and last letter, so the first and last
+    // sounds the recognizer usually gets right still anchor it.
+    // The best match wins, and a tie is no match at all.
+    var bestCode: String? = null
+    var bestPos = -1
+    var bestDist = Int.MAX_VALUE
+    var tied = false
+    for (tok in tokens) {
+        val word = tok.word.lowercase()
+        if (word.length < 6) continue
+        for ((key, code) in ASSET_WORDS) {
+            if (key.length < 5) continue
+            if (word.first() != key.first() || word.last() != key.last()) continue
+            val d = levenshtein(word, key)
+            if (d <= 3 && d < bestDist) {
+                bestDist = d
+                bestCode = code
+                bestPos = tok.start
+                tied = false
+            } else if (d <= 3 && d == bestDist && code != bestCode) {
+                tied = true
+            }
+        }
+    }
+    if (bestCode != null && !tied) return bestCode to bestPos
     return null
+}
+
+/** Plain edit distance between two words, for the fuzzy asset
+ * match above. Small and pure, so the unit tests can pin it. */
+fun levenshtein(a: String, b: String): Int {
+    if (a == b) return 0
+    if (a.isEmpty()) return b.length
+    if (b.isEmpty()) return a.length
+    var prev = IntArray(b.length + 1) { it }
+    var cur = IntArray(b.length + 1)
+    for (i in 1..a.length) {
+        cur[0] = i
+        for (j in 1..b.length) {
+            val cost = if (a[i - 1] == b[j - 1]) 0 else 1
+            cur[j] = minOf(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost)
+        }
+        val tmp = prev
+        prev = cur
+        cur = tmp
+    }
+    return prev[b.length]
 }
 
 /**
@@ -601,6 +673,19 @@ fun normalizeHeard(text: String, language: VoiceLanguage = VoiceLanguage.ENGLISH
     return t
 }
 
+/** How much a parse is worth when several recognition candidates
+ * compete: an order beats a question, a question beats an
+ * ask-again, and an ask-again beats a refusal. Shared by the
+ * single-language and the multi-language scorers, so the two
+ * cannot drift apart. */
+internal fun parseScore(parsed: VoiceParseResult): Int = when (parsed) {
+    is VoiceParseResult.Order -> 3
+    is VoiceParseResult.Question -> 2
+    is VoiceParseResult.Navigate -> 2
+    is VoiceParseResult.AskAgain -> 1
+    is VoiceParseResult.OutOfScope -> 0
+}
+
 /**
  * Scores every recognition candidate against what the app can
  * actually do, and takes the best parse instead of trusting the top
@@ -624,13 +709,7 @@ fun parseBestVoiceUtterance(
     for (candidate in candidates) {
         val norm = normalizeHeard(candidate, language)
         val parsed = parseVoiceUtterance(norm, markets, currentMarketId, language)
-        val score = when (parsed) {
-            is VoiceParseResult.Order -> 3
-            is VoiceParseResult.Question -> 2
-            is VoiceParseResult.Navigate -> 2
-            is VoiceParseResult.AskAgain -> 1
-            is VoiceParseResult.OutOfScope -> 0
-        }
+        val score = parseScore(parsed)
         if (score > bestScore) {
             bestScore = score
             best = parsed
@@ -654,6 +733,62 @@ fun parseBestVoiceUtterance(
         }
     }
     return (best ?: VoiceParseResult.AskAgain("I did not catch that. Say it again.")) to bestText
+}
+
+/**
+ * v1.1.28: the same scoring, but every candidate is parsed in its
+ * own language. The cloud recognizer can report two transcripts
+ * for one turn: the auto-detected one, and a retry forced to the
+ * language set in Settings, when the two disagree. Flint's
+ * accented English was detected as Portuguese, so the auto
+ * transcript was Portuguese garbage and the forced English one
+ * was the real sentence; parsing each in its own language lets
+ * the better parse win instead of trusting the detector. The
+ * winner's language comes back too, so the answer is spoken in
+ * the language the winning words were actually in. The recognizer
+ * order still breaks ties, so a genuine other-language turn wins
+ * its tie against the forced retry.
+ */
+fun parseBestVoiceUtteranceMulti(
+    candidates: List<Pair<String, VoiceLanguage>>,
+    markets: List<Market>,
+    currentMarketId: String? = null
+): Triple<VoiceParseResult, String, VoiceLanguage> {
+    var best: VoiceParseResult? = null
+    var bestScore = -1
+    var bestText = ""
+    var bestLanguage = candidates.firstOrNull()?.second ?: VoiceLanguage.ENGLISH
+    for ((candidate, language) in candidates) {
+        val norm = normalizeHeard(candidate, language)
+        val parsed = parseVoiceUtterance(norm, markets, currentMarketId, language)
+        val score = parseScore(parsed)
+        if (score > bestScore) {
+            bestScore = score
+            best = parsed
+            bestText = norm
+            bestLanguage = language
+        }
+    }
+    if (bestScore <= 0) {
+        val firstLanguage = candidates.firstOrNull()?.second ?: VoiceLanguage.ENGLISH
+        val questionWords = vocabFor(firstLanguage).questionStarters
+        val anyQuestionLike = candidates.any { (c, language) ->
+            val l = normalizeHeard(c, language).lowercase()
+            questionWords.any { l.contains(it) }
+        }
+        if (!anyQuestionLike) {
+            return Triple(
+                VoiceParseResult.AskAgain("I did not catch that. Say it again."),
+                bestText,
+                bestLanguage
+            )
+        }
+    }
+    return Triple(
+        best ?: VoiceParseResult.AskAgain("I did not catch that. Say it again."),
+        bestText,
+        bestLanguage
+    )
 }
 fun formatVoiceAmount(v: Double): String {
     if (v == v.toLong().toDouble()) return v.toLong().toString()
@@ -838,14 +973,59 @@ private fun parseVoiceQuestion(
         if (phrase.length <= 5) firstWord == phrase
         else lower.contains(phrase)
     }
-    // A hello that continues into a cut-off question ("hey how are")
-    // is the recognizer stopping halfway, not a greeting.
-    val afterHello = trimmed.substringAfter(" ", "").trimStart()
-    val continuesIntoQuestion = vocab.questionStarters.any { afterHello.startsWith(it) }
-    if (hello && continuesIntoQuestion && looksTruncated(lower, language)) {
-        return VoiceParseResult.AskAgain("I did not catch the whole thing. Say it again.")
+    // A hello that continues into a question is the question, not
+    // the greeting. v1.1.28: "Good morning. Tell me about Prognos
+    // Labs." was answered with a greeting and the question was
+    // never answered, because the greeting branch fired first and
+    // the rest of the sentence was thrown away. Strip the greeting
+    // and parse the rest: a question, an order or a navigation in
+    // the tail wins. An unclear tail ("hey how are") still asks
+    // the user to repeat the whole thing. A tail that is not a
+    // question at all ("hello, thank you") is a pleasantry, so the
+    // greeting stands and the session stays open.
+    // What follows the greeting, with the greeting itself
+    // stripped: "good morning. tell me about X" leaves "tell me
+    // about X", not "morning. tell me about X", which is what the
+    // old first-space split left behind. Multi-word greetings are
+    // tried longest first, and the match must end on a word
+    // boundary, so "oil price" never strips "oi". "Hi there" is
+    // stripped whole, so it still greets instead of asking again
+    // about the leftover word "there".
+    val afterHello = run {
+        val phrases = (vocab.helloPhrases + HELLO_WORDS_ANY_LANGUAGE +
+            setOf("hi there", "hello there", "hey there"))
+            .map { it.trim().lowercase() }
+            .filter { it.isNotEmpty() }
+            .sortedByDescending { it.length }
+        for (phrase in phrases) {
+            if (trimmed.startsWith(phrase)) {
+                val after = trimmed.substring(phrase.length)
+                if (after.isEmpty() || after.first() in " .?!,;:") {
+                    return@run after.trimStart(' ', '.', '?', '!', ',', ';', ':')
+                }
+            }
+        }
+        trimmed.substringAfter(" ", "").trimStart()
     }
-    if (hello) return VoiceParseResult.Question(VoiceQuestion.GreetingHello, text)
+    if (hello) {
+        val rest = afterHello.trim()
+        if (rest.isNotEmpty()) {
+            val reparsed = parseVoiceUtterance(rest, markets, currentMarketId, language)
+            when (reparsed) {
+                is VoiceParseResult.Question, is VoiceParseResult.Order,
+                is VoiceParseResult.Navigate -> return reparsed
+                is VoiceParseResult.AskAgain -> {
+                    // Only when the tail really looks like a question
+                    // cut off halfway ("hey how are"). A pleasantry
+                    // ("hello, thank you") greets instead of asking
+                    // the user to repeat a thank-you.
+                    if (vocab.questionStarters.any { rest.startsWith(it) }) return reparsed
+                }
+                else -> {}
+            }
+        }
+        return VoiceParseResult.Question(VoiceQuestion.GreetingHello, text)
+    }
 
     // v1.1.15: "Can you hear me?" / "Are you listening?" is the
     // user checking the mic is live. It is not an off-topic
@@ -907,6 +1087,17 @@ private fun parseVoiceQuestion(
             if (m != null) return VoiceParseResult.Question(VoiceQuestion.MarketInfo(m.id), text)
             return VoiceParseResult.AskAgain(vocab.askMarket)
         }
+    }
+    // v1.1.28: "Tell me about Ethereum" is an asset question, not
+    // a refusal. It has no price word and no trading word, so it
+    // fell past every branch above and was refused as out of scope,
+    // and the misheard "Ecterium" never even named the asset. With
+    // a market loaded the answer is the market; without one it is
+    // the price, which the ticker carries either way.
+    if (mention != null && containsAnyWord(lower, tellAboutPhrases(language))) {
+        val m = mentionedMarket
+        if (m != null) return VoiceParseResult.Question(VoiceQuestion.MarketInfo(m.id), text)
+        return VoiceParseResult.Question(VoiceQuestion.Price(mention.first), text)
     }
     // Platform knowledge: what Prognos Labs is, how the markets and
     // the forecasting work, wallets, deposits, launch, fees, points.
