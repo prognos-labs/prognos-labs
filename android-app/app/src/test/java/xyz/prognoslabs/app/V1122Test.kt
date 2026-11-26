@@ -45,8 +45,8 @@ class V1122Test {
     @Test
     fun versionIs1123() {
         val gradle = readSource("app/build.gradle.kts")
-        assertTrue(gradle.contains("versionCode = 34"))
-        assertTrue(gradle.contains("versionName = \"1.1.24\""))
+        assertTrue(gradle.contains("versionCode = 35"))
+        assertTrue(gradle.contains("versionName = \"1.1.25\""))
     }
 
     // ---- Error 1: "can you take a trade for me" must not refuse ----

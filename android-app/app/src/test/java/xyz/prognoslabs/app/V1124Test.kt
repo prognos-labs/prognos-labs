@@ -39,8 +39,8 @@ class V1124Test {
     @Test
     fun versionIs1124() {
         val gradle = readSource("app/build.gradle.kts")
-        assertTrue(gradle.contains("versionCode = 34"))
-        assertTrue(gradle.contains("versionName = \"1.1.24\""))
+        assertTrue(gradle.contains("versionCode = 35"))
+        assertTrue(gradle.contains("versionName = \"1.1.25\""))
     }
 
     // ---- Direction 3: the portfolio is back ----
@@ -85,15 +85,25 @@ class V1124Test {
     }
 
     // ---- Direction 2: the noise gate is wired into capture ----
+    // v1.1.25: the cloud capture no longer keeps its own inline copy
+    // of the gate. It runs the shared VoiceGate, so the two paths
+    // cannot drift apart again the way they did in v1.1.24.
 
     @Test
     fun adaptiveNoiseGateWiredIntoCapture() {
         val engineSrc = readSource(
             "app/src/main/java/xyz/prognoslabs/app/ui/VoiceEngine.kt"
         )
-        assertTrue(engineSrc.contains("isSilentAdaptive"))
-        assertTrue(engineSrc.contains("WhisperRecognizer.CALIBRATION_MS"))
-        assertTrue(engineSrc.contains("WhisperRecognizer.ONSET_FRAMES_REQUIRED"))
+        assertTrue(engineSrc.contains("VoiceGate()"))
+        assertTrue(engineSrc.contains("gate.onFrame"))
+        assertTrue(engineSrc.contains("preRoll"))
+        assertTrue(engineSrc.contains("MIN_CAPTURE_SECONDS"))
         assertTrue(engineSrc.contains("VoiceSample.NoAudio"))
+        val gateSrc = readSource(
+            "app/src/main/java/xyz/prognoslabs/app/voice/VoiceGate.kt"
+        )
+        assertTrue(gateSrc.contains("isSilentAdaptive"))
+        assertTrue(gateSrc.contains("WhisperRecognizer.CALIBRATION_MS"))
+        assertTrue(gateSrc.contains("WhisperRecognizer.ONSET_FRAMES_REQUIRED"))
     }
 }

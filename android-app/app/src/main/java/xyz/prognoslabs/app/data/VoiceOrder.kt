@@ -102,6 +102,28 @@ sealed class VoiceParseResult {
 /** The answer to a plain "hello" or "hi". No "how are you" in it. */
 const val GREETING_HELLO_ANSWER = "Hi there. What would you like to do?"
 
+/**
+ * A greeting in any of the app languages, checked whatever the
+ * turn language is. "Bonjour" is a greeting even when the language
+ * was not detected and the Settings language is English, so it must
+ * never fall through to "say it again". Single words match the first
+ * word only; phrases match anywhere in the sentence.
+ */
+val HELLO_WORDS_ANY_LANGUAGE: Set<String> = setOf(
+    "bonjour", "salut", // French
+    "hola", // Spanish
+    "ciao", // Italian, widely used as a greeting
+    "olá", "ola", "oi", // Portuguese
+    "hallo", // German
+    "merhaba", "selam", // Turkish
+    "salam", "marhaba", // Arabic
+    "shalom", // Hebrew
+    "ni hao", // Chinese
+    "bawo", // Yoruba
+    "sannu", // Hausa
+    "ndewo" // Igbo
+)
+
 /** The answer to "how are you" or "how's it going". */
 const val GREETING_HOW_ARE_YOU_ANSWER = "I'm doing well. What would you like to do?"
 
@@ -662,12 +684,21 @@ private fun parseVoiceQuestion(
     // again" instead of being answered. Short greeting words are
     // matched on the first word, punctuation stripped, so "Hello."
     // and "Hello. Thank you." both greet.
+    // v1.1.25: a greeting in any language counts, even when the
+    // language was not detected and the Settings language is
+    // English: "bonjour" is a greeting, not a word to refuse. The
+    // answer still comes back in the turn language, so a detected
+    // French greeting gets a French answer.
     val trimmed = lower.trim().trimEnd('.', '?', '!', ',')
     val firstWord = trimmed.split(Regex("\\s+")).firstOrNull()
         ?.trimEnd('.', '?', '!', ',')
     val howAreYou = vocab.howAreYouPhrases.any { lower.contains(it) }
     if (howAreYou) return VoiceParseResult.Question(VoiceQuestion.GreetingHowAreYou, text)
-    val hello = vocab.helloPhrases.any { phrase ->
+    val helloAnyLanguage = HELLO_WORDS_ANY_LANGUAGE.any { word ->
+        if (word.length <= 5) firstWord == word
+        else lower.contains(word)
+    }
+    val hello = helloAnyLanguage || vocab.helloPhrases.any { phrase ->
         if (phrase.length <= 5) firstWord == phrase
         else lower.contains(phrase)
     }

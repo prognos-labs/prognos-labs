@@ -23,6 +23,7 @@ import xyz.prognoslabs.app.data.cleanRecognizedText
 import xyz.prognoslabs.app.data.voiceLanguageForLocale
 import xyz.prognoslabs.app.data.voiceLanguageSupported
 import xyz.prognoslabs.app.data.whisperCodeFor
+import xyz.prognoslabs.app.voice.VoiceGate
 import xyz.prognoslabs.app.voice.WhisperModelManager
 import xyz.prognoslabs.app.voice.WhisperNative
 import xyz.prognoslabs.app.voice.WhisperRecognizer
@@ -73,8 +74,10 @@ class VoiceEngine(
         val RECOGNITION_LOCALE: Locale = Locale.US
         const val CAPTURE_SILENCE_TO_STOP_MS = 800L
         const val CLOUD_MAX_SECONDS = 15
-        const val BASELINE_MIN_RMS = 150.0
-        const val BASELINE_MAX_RMS = 1200.0
+
+        /** A captured clip shorter than this is a fragment, not a
+         * word: keep listening instead of transcribing it. */
+        const val MIN_CAPTURE_SECONDS = 0.8
 
         fun shouldStopCapture(speechHeard: Boolean, silenceMs: Long): Boolean =
             speechHeard && silenceMs >= CAPTURE_SILENCE_TO_STOP_MS
@@ -156,19 +159,19 @@ class VoiceEngine(
         startOnDeviceListening(onEvent)
     }
 
-    private fun startOnDeviceListening(onEvent: (Event) -> Unit) {
+    private fun startOnDeviceListening(onEvent: (Event) -> Unit, autoDetect: Boolean = false) {
         if (!WhisperNative.isAvailable) {
             onEvent(Event.Unavailable)
             return
         }
         if (whisperModel.isModelReady()) {
-            startWhisperListening(onEvent)
+            startWhisperListening(onEvent, autoDetect)
             return
         }
         whisperScope.launch {
             val ready = whisperModel.ensureModel()
             withContext(Dispatchers.Main) {
-                if (ready) startWhisperListening(onEvent)
+                if (ready) startWhisperListening(onEvent, autoDetect)
                 else onEvent(Event.Unavailable)
             }
         }
@@ -197,8 +200,14 @@ class VoiceEngine(
                         val cleaned = result?.text?.let { cleanRecognizedText(it) }
                         withContext(Dispatchers.Main) {
                             if (cleaned.isNullOrBlank()) {
-                                // Cloud returned nothing. Fall back to on-device listening.
-                                startOnDeviceListening(onEvent)
+                                // Cloud returned nothing. Fall back to
+                                // on-device listening, and let it detect
+                                // the language itself: the cloud just
+                                // failed, so nothing is known about what
+                                // was spoken, and forcing the language
+                                // set in Settings onto audio spoken in
+                                // another language only returns garbage.
+                                startOnDeviceListening(onEvent, autoDetect = true)
                             } else {
                                 onEvent(
                                     Event.Final(
@@ -216,12 +225,18 @@ class VoiceEngine(
         }
     }
 
-    private fun startWhisperListening(onEvent: (Event) -> Unit) {
+    private fun startWhisperListening(onEvent: (Event) -> Unit, autoDetect: Boolean = false) {
         stopListening()
         val rec = whisperRecognizer ?: WhisperRecognizer(
             modelManager = whisperModel,
             languageCode = { whisperCodeFor(voiceLanguage()) }
         ).also { whisperRecognizer = it }
+        // The language for this listen: "auto" when the cloud just
+        // missed and nothing is known about what was spoken, so the
+        // on-device recognizer detects it instead of forcing the
+        // language set in Settings; otherwise the language set in
+        // Settings, as before.
+        rec.setLanguageCode(if (autoDetect) "auto" else whisperCodeFor(voiceLanguage()))
         listening = true
         rec.start { event ->
             if (event is Event.Final || event is Event.Error || event is Event.Unavailable) {
@@ -302,10 +317,17 @@ class VoiceEngine(
     }
 
     /**
-     * Captures audio using the adaptive noise floor gate:
-     * 250 ms calibration on quiet frames, clamped floor [150, 1200],
-     * threshold max(400, floor * 1.8), and 2 consecutive active frames
-     * before speech starts. Returns NoAudio if no real speech passed the gate.
+     * Captures audio through the shared speech gate (VoiceGate):
+     * 250 ms calibration on quiet frames only, steady room noise
+     * absorbed into the floor, and 2 consecutive active frames
+     * before speech starts. Frames heard before speech is confirmed
+     * are kept in a pre-roll buffer and prepended once speech is
+     * confirmed, so a word spoken the moment the mic opens arrives
+     * whole: v1.1.24 threw the first 250 ms away and needed two loud
+     * frames before it wrote anything, so a short word arrived
+     * truncated and the recognizer invented a sentence from the
+     * fragment. Returns NoAudio if no real speech passed the gate,
+     * or if the clip is shorter than a real word.
      */
     private fun runCapture(minBuf: Int, maxSeconds: Int, session: Int) {
         if (isStaleCaptureSession(session, captureSession)) {
@@ -351,15 +373,14 @@ class VoiceEngine(
             return
         }
         audioOk = true
+        val gate = VoiceGate()
         val buf = ByteArray(minBuf)
         val maxBytes = sampleRate * 2 * 30
+        val preRollMaxBytes = sampleRate * 2
+        val preRoll = ArrayDeque<ByteArray>()
+        var preRollBytes = 0
         val startedMs = SystemClock.uptimeMillis()
         var speechHeard = false
-        var onsetStreak = 0
-        var lastSpeechMs = startedMs
-        var baselineSum = 0.0
-        var baselineCount = 0
-        var baselineRms = WhisperRecognizer.SILENCE_RMS / WhisperRecognizer.NOISE_FLOOR_MULTIPLIER
 
         while (capturing.get()) {
             if (isStaleCaptureSession(session, captureSession)) break
@@ -374,34 +395,38 @@ class VoiceEngine(
 
             val shorts = bytesToShorts(buf, read)
             val rms = WhisperRecognizer.rmsOf(shorts)
+            val elapsedMs = nowMs - startedMs
+            val wasHeard = speechHeard
+            gate.onFrame(rms, nowMs, elapsedMs)
+            speechHeard = gate.speechHeard
 
-            // Calibrate room noise during the first 250 ms using quiet frames only
-            // so a loud first frame does not poison the floor.
-            if (!speechHeard && nowMs - startedMs < WhisperRecognizer.CALIBRATION_MS) {
-                if (rms <= BASELINE_MAX_RMS) {
-                    baselineSum += rms
-                    baselineCount++
-                    baselineRms = (baselineSum / baselineCount).coerceIn(BASELINE_MIN_RMS, BASELINE_MAX_RMS)
-                }
-                continue
-            }
-
-            if (!WhisperRecognizer.isSilentAdaptive(rms, baselineRms)) {
-                onsetStreak++
-                if (onsetStreak >= WhisperRecognizer.ONSET_FRAMES_REQUIRED) {
-                    speechHeard = true
-                    lastSpeechMs = nowMs
-                }
-            } else {
-                onsetStreak = 0
-            }
-
-            if (speechHeard && shouldStopCapture(speechHeard, nowMs - lastSpeechMs)) break
             if (speechHeard) {
+                if (!wasHeard) {
+                    // Speech just confirmed: the frames kept in the
+                    // pre-roll are the start of this word, so they go
+                    // into the capture first, then this frame.
+                    synchronized(captureLock) {
+                        if (!isStaleCaptureSession(session, captureSession)) {
+                            for (frame in preRoll) {
+                                if (capturedBytes.size() >= maxBytes) break
+                                capturedBytes.write(frame, 0, minOf(frame.size, maxBytes - capturedBytes.size()))
+                            }
+                        }
+                    }
+                    preRoll.clear()
+                    preRollBytes = 0
+                }
+                if (shouldStopCapture(speechHeard, gate.silenceMs(nowMs))) break
                 synchronized(captureLock) {
                     if (!isStaleCaptureSession(session, captureSession) && capturedBytes.size() < maxBytes) {
                         capturedBytes.write(buf, 0, minOf(read, maxBytes - capturedBytes.size()))
                     }
+                }
+            } else {
+                preRoll.addLast(buf.copyOf(read))
+                preRollBytes += read
+                while (preRollBytes > preRollMaxBytes && preRoll.isNotEmpty()) {
+                    preRollBytes -= preRoll.removeFirst().size
                 }
             }
         }
@@ -412,7 +437,8 @@ class VoiceEngine(
         }
         record.release()
         val bytes = synchronized(captureLock) { capturedBytes.toByteArray() }
-        if (audioOk && speechHeard && bytes.isNotEmpty()) {
+        val durationSec = bytes.size.toDouble() / (sampleRate * 2)
+        if (audioOk && speechHeard && bytes.isNotEmpty() && durationSec >= MIN_CAPTURE_SECONDS) {
             deliverCapture(session, VoiceSample.Captured(bytesToShorts(bytes), sampleRate))
         } else {
             deliverCapture(session, VoiceSample.NoAudio)

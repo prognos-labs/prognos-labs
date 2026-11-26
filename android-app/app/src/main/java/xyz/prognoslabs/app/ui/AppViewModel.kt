@@ -39,6 +39,7 @@ import xyz.prognoslabs.app.data.AuthState
 import xyz.prognoslabs.app.data.AuthStore
 import xyz.prognoslabs.app.data.CurrencyStore
 import xyz.prognoslabs.app.data.cleanRecognizedText
+import xyz.prognoslabs.app.data.isNoiseTranscript
 import xyz.prognoslabs.app.voice.GroqAsrProvider
 import xyz.prognoslabs.app.data.DisplayCurrency
 import xyz.prognoslabs.app.data.FX_RATES_MAX_AGE_MS
@@ -471,6 +472,16 @@ fun setVoiceLanguage(language: VoiceLanguage, persist: Boolean = true) {
      * the user a message. Reset by anything heard.
      */
     private var voiceSilentErrors = 0
+
+    /**
+     * v1.1.25: breath or room-noise transcripts in a row ("The", ".")
+     * while a voice session is open. These are not speech, so they
+     * listen again quietly instead of showing "say it again" for a
+     * breath. After several in a row the message shows once and the
+     * session stops, so the mic never restarts forever unheard.
+     * Reset by anything really heard.
+     */
+    private var voiceNoiseRestarts = 0
 
     private var refreshJob: Job? = null
 
@@ -1116,7 +1127,13 @@ private fun restartListening() {
 
     listenWatchdogJob?.cancel()
     listenWatchdogJob = viewModelScope.launch {
-        delay(10_000L)
+        // v1.1.25: 25 seconds, not 10. The cloud transcription
+        // alone may take up to 20 seconds on a slow connection, so
+        // a 10 second watchdog killed a slow first answer after a
+        // cold start mid-transcription and the late result was
+        // dropped as stale: the mic looked dead when it had heard
+        // fine. 25 seconds still catches a genuinely hung listen.
+        delay(25_000L)
         if (session == voiceSession &&
             (_voiceSheet.value is VoiceSheet.Listening ||
                 _voiceSheet.value is VoiceSheet.VoiceCheck ||
@@ -1168,6 +1185,7 @@ private fun restartListening() {
         when (event) {
             is VoiceEngine.Event.Partial -> {
                 voiceSilentErrors = 0
+                voiceNoiseRestarts = 0
                 // v1.1.14: a partial is only the live words for the
                 // sheet. Silence must never show as speech, so the
                 // words are cleaned first; a silent stretch shows
@@ -1186,6 +1204,24 @@ private fun restartListening() {
                 // becomes a word the app answers to.
                 val cleaned = cleanRecognizedText(event.text)
                 if (cleaned == null) return
+                if (isNoiseTranscript(cleaned)) {
+                    // v1.1.25: a breath or room noise the recognizer
+                    // turned into a word (".", "The") is silence, not
+                    // speech. Listen again quietly: showing "say it
+                    // again" for a breath loops the message while the
+                    // user said nothing. After several in a row the
+                    // message shows once and the session stops, so
+                    // the mic never restarts forever unheard.
+                    voiceNoiseRestarts++
+                    if (voiceNoiseRestarts >= 5) {
+                        voiceNoiseRestarts = 0
+                        _voiceSheet.value = VoiceSheet.Message("I did not catch that. Say it again.", isError = true)
+                    } else {
+                        restartListening()
+                    }
+                    return
+                }
+                voiceNoiseRestarts = 0
                 val cleanedEvent = event.copy(
                     text = cleaned,
                     candidates = event.candidates.mapNotNull { cleanRecognizedText(it) }

@@ -72,9 +72,42 @@ class WhisperModelManager(
     fun isModelReady(): Boolean =
         modelFile.isFile && modelFile.length() == expectedSizeBytes
 
-    /** True when a bundled copy was supplied: the model ships in
-     * the APK, so it can always be made ready. */
-    fun hasBundledModel(): Boolean = bundledModel != null
+    /**
+     * Deletes the model file on disk, so the next voice use extracts
+     * a fresh copy from the app. Used when the file is the right size
+     * but the native library cannot load it: the file is corrupt, and
+     * keeping it would leave the mic dead on every listen.
+     */
+    fun deleteModel() {
+        try {
+            modelFile.delete()
+        } catch (e: Exception) {
+            // A delete that fails leaves the file for the next check.
+        }
+        try {
+            tmpFile.delete()
+        } catch (e: Exception) {
+            // Same as above.
+        }
+        _status.value = WhisperStatus.Missing
+    }
+
+    /**
+     * True when a bundled copy was supplied and can actually be
+     * opened: the model ships in the APK, so it can always be made
+     * ready. Opening the stream (and closing it at once) is the
+     * check: a missing asset throws here, instead of the mic opening
+     * a sheet that can never work and going silently dead.
+     */
+    fun hasBundledModel(): Boolean {
+        val openBundled = bundledModel ?: return false
+        return try {
+            openBundled().close()
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
 
     /**
      * Copies the bundled model into place when it is missing, and

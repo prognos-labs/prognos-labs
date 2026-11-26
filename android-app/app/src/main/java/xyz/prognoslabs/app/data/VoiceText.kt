@@ -62,3 +62,29 @@ internal fun stripThankYouSentences(text: String): String {
 
 /** True when the recognizer output is silence, not speech. */
 fun isSilenceText(text: String): Boolean = cleanRecognizedText(text) == null
+
+/**
+ * Words the recognizer invents from breaths and room noise: a bare
+ * "The" or a lone "." after a quiet stretch is not something the user
+ * said. A single word is only noise when it is one of these: a real
+ * one-word answer ("yes", "no", "hello", "bonjour") is never in this
+ * set, so it still reaches the parser.
+ */
+private val NOISE_ONLY_WORDS = setOf(
+    "the", "a", "an", "and", "um", "uh", "hmm", "er", "mmm", "huh"
+)
+
+/**
+ * True when the transcript is breath or room noise the recognizer
+ * turned into a word, not speech. The caller treats it as silence:
+ * keep listening quietly, never show "say it again" for a breath.
+ * Anything the cleaner already drops (blank audio, a bare
+ * thank-you) counts as noise too.
+ */
+fun isNoiseTranscript(text: String): Boolean {
+    val cleaned = cleanRecognizedText(text) ?: return true
+    val stripped = cleaned.trim().trim('.', '?', '!', ',', ';', ':', '-', '…', '—', '–')
+    if (stripped.isEmpty()) return true
+    val words = stripped.lowercase().split(Regex("\\s+"))
+    return words.size == 1 && words[0] in NOISE_ONLY_WORDS
+}

@@ -53,6 +53,24 @@ class WhisperRecognizer(
         /** Consecutive active frames required to confirm speech onset. */
         const val ONSET_FRAMES_REQUIRED = 2
 
+        /**
+         * Frames this loud may be steady room noise, not speech.
+         * The gate absorbs a short run of steady frames in this band
+         * into the noise floor (see VoiceGate). Anything louder is
+         * speech, whatever the room sounds like.
+         */
+        const val NOISE_BAND_MAX_RMS = 1200.0
+
+        /** Steady frames in a row before the run counts as room noise. */
+        const val STABLE_RUN_FRAMES = 3
+
+        /** How close together the frames in a steady run must be. */
+        const val STABLE_RUN_TOLERANCE = 0.15
+
+        /** A captured segment shorter than this is a fragment, not a
+         * word: keep listening instead of transcribing it. */
+        const val MIN_SEGMENT_MS = 800L
+
         /** Supported on-device Whisper language codes. */
         fun whisperLanguageCode(locale: Locale): String {
             val code = locale.language.lowercase(Locale.US)
@@ -93,6 +111,20 @@ class WhisperRecognizer(
     private var nativeContext: Long = 0
     private val transcribeLock = Any()
     private var onEvent: ((VoiceEngine.Event) -> Unit)? = null
+
+    /**
+     * The language for the next transcription, when the caller knows
+     * better than the constructor lambda: the cloud path detected a
+     * language, or the cloud missed and the recognizer should detect
+     * the language itself ("auto") instead of forcing the language
+     * set in Settings onto audio spoken in another language. Null
+     * means the constructor lambda decides, as before.
+     */
+    private var languageOverride: String? = null
+
+    fun setLanguageCode(code: String?) {
+        languageOverride = code
+    }
 
     fun ready(): Boolean = modelManager.isModelReady() && WhisperNative.isAvailable
 
@@ -208,6 +240,16 @@ class WhisperRecognizer(
         val segment = ByteArrayOutputStream()
         val gate = VoiceGate()
 
+        // Pre-roll: frames heard before the gate confirms speech
+        // (calibration frames and the first onset frame) are kept,
+        // not dropped, and written into the segment once speech is
+        // confirmed, so a word spoken the moment the mic opens
+        // arrives whole instead of truncated. Capped at about a
+        // second of audio.
+        val preRoll = ArrayDeque<ByteArray>()
+        var preRollBytes = 0
+        val preRollMaxBytes = SAMPLE_RATE * 2
+
         val startedMs = SystemClock.uptimeMillis()
         val buf = ByteArray(4096)
 
@@ -230,10 +272,25 @@ class WhisperRecognizer(
                 onEvent?.invoke(VoiceEngine.Event.Level(normLevel))
             }
 
-            if (gate.onFrame(rms, now, elapsedMs)) continue
+            val wasHeard = gate.speechHeard
+            gate.onFrame(rms, now, elapsedMs)
 
             if (gate.speechHeard) {
+                if (!wasHeard) {
+                    // Speech just confirmed: the frames kept in the
+                    // pre-roll are the start of this word, so they go
+                    // into the segment first, then this frame.
+                    for (frame in preRoll) segment.write(frame)
+                    preRoll.clear()
+                    preRollBytes = 0
+                }
                 segment.write(buf, 0, read)
+            } else {
+                preRoll.addLast(buf.copyOf(read))
+                preRollBytes += read
+                while (preRollBytes > preRollMaxBytes && preRoll.isNotEmpty()) {
+                    preRollBytes -= preRoll.removeFirst().size
+                }
             }
 
             if (gate.shouldFinalize(now, elapsedMs)) break
@@ -259,8 +316,25 @@ class WhisperRecognizer(
             return
         }
 
+        // A fragment shorter than a real word is not transcribed:
+        // the recognizer invents whole sentences from fragments, so
+        // a short capture means keep listening instead. The segment
+        // holds the word plus the trailing silence before the
+        // finalize, so a real short word ("yes") is well over this.
+        if (bytes.size < SAMPLE_RATE * 2 * MIN_SEGMENT_MS / 1000) {
+            onEvent?.invoke(VoiceEngine.Event.Error("I did not catch that. Say it again.", silent = true))
+            return
+        }
+
         if (nativeContext() == 0L) {
-            onEvent?.invoke(VoiceEngine.Event.Unavailable)
+            // The model file is the right size but the native library
+            // cannot load it: the file is corrupt, and the mic would
+            // stay dead on every listen until it is replaced. Delete
+            // the suspect file so the next listen re-extracts a fresh
+            // copy from the app, and say so in plain words instead of
+            // leaving the mic silently dead.
+            if (modelManager.isModelReady()) modelManager.deleteModel()
+            onEvent?.invoke(VoiceEngine.Event.Error("Voice is getting ready. Tap the mic to try again."))
             return
         }
 
@@ -282,7 +356,7 @@ class WhisperRecognizer(
                 WhisperNative.nativeTranscribe(
                     context = ctx,
                     pcm = pcm,
-                    language = languageCode(),
+                    language = languageOverride ?: languageCode(),
                     threads = Runtime.getRuntime().availableProcessors().coerceIn(1, 4),
                     initialPrompt = initialPrompt()
                 )

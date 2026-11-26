@@ -269,8 +269,8 @@ class V111Test {
         ).firstOrNull { it.isFile }
             ?: throw AssertionError("Cannot find app/build.gradle.kts from $cwd")
         val text = gradle.readText()
-        assertTrue("versionCode must be 34", text.contains("versionCode = 34"))
-        assertTrue("versionName must be 1.1.24", text.contains("versionName = \"1.1.24\""))
+        assertTrue("versionCode must be 35", text.contains("versionCode = 35"))
+        assertTrue("versionName must be 1.1.25", text.contains("versionName = \"1.1.25\""))
     }
 
     @Test
