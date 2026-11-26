@@ -126,6 +126,14 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.5")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.5")
     implementation("androidx.activity:activity-compose:1.9.2")
+    // v1.1.25: the release build runs lintVital, and it refuses the
+    // mic permission launcher (registerForActivityResult in
+    // MainActivity) while Fragment resolves to 1.2.5: the activity
+    // result APIs need Fragment 1.3.0 or newer. Nothing in the graph
+    // pulls a newer Fragment, so pin it explicitly. FragmentActivity
+    // is only the host here (the UI is all Compose), so the bump is
+    // the host the activity library is built against.
+    implementation("androidx.fragment:fragment-ktx:1.8.5")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
