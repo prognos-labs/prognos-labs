@@ -425,6 +425,90 @@ private fun tradeWords(language: VoiceLanguage): Set<String> = when (language) {
     VoiceLanguage.IGBO -> setOf("ịzụ ahịa", "izu ahia", "ahịa", "ahia")
 }
 
+/** Words that set a price limit below a price, in each language. */
+private fun limitBelowWords(language: VoiceLanguage): Set<String> = when (language) {
+    VoiceLanguage.ENGLISH -> setOf("below", "under", "beneath", "less", "lower")
+    VoiceLanguage.SPANISH -> setOf("debajo", "por debajo", "menos")
+    VoiceLanguage.FRENCH -> setOf("dessous", "au-dessous", "moins")
+    VoiceLanguage.PORTUGUESE -> setOf("abaixo", "menos")
+    VoiceLanguage.GERMAN -> setOf("unter", "unterhalb", "weniger")
+    VoiceLanguage.TURKISH -> setOf("altında", "altinda", "aşağı", "asagi")
+    VoiceLanguage.ARABIC -> setOf("أقل", "اقل", "تحت")
+    VoiceLanguage.YORUBA -> setOf("lábẹ́", "labe")
+    VoiceLanguage.HAUSA -> setOf("ƙasa", "kasa")
+    VoiceLanguage.HEBREW -> setOf("מתחת")
+    VoiceLanguage.CHINESE -> setOf("低于")
+    VoiceLanguage.IGBO -> setOf("n'okpuru", "nokpuru")
+}
+
+/** Words that set a price limit above a price, in each language. */
+private fun limitAboveWords(language: VoiceLanguage): Set<String> = when (language) {
+    VoiceLanguage.ENGLISH -> setOf("above", "over", "more", "higher")
+    VoiceLanguage.SPANISH -> setOf("encima", "por encima", "más", "mas")
+    VoiceLanguage.FRENCH -> setOf("au-dessus", "plus")
+    VoiceLanguage.PORTUGUESE -> setOf("acima", "mais")
+    VoiceLanguage.GERMAN -> setOf("über", "uber", "oberhalb", "mehr")
+    VoiceLanguage.TURKISH -> setOf("üstünde", "ustunde", "yukarı", "yukari")
+    VoiceLanguage.ARABIC -> setOf("فوق", "أعلى", "اعلى")
+    VoiceLanguage.YORUBA -> setOf("lókè", "loke")
+    VoiceLanguage.HAUSA -> setOf("sama")
+    VoiceLanguage.HEBREW -> setOf("מעל")
+    VoiceLanguage.CHINESE -> setOf("高于")
+    VoiceLanguage.IGBO -> setOf("n'elu", "nelu")
+}
+
+/**
+ * A price the user named as a limit on a trade: "trade Bitcoin
+ * below 35" wants the outcome at 0.35 or less, not $35. [start]
+ * and [end] cover the whole limit phrase, so its words never
+ * count as a direction; [numberStart] is the number itself, so
+ * it never counts as the amount.
+ */
+private data class PriceLimit(
+    val below: Boolean,
+    val price: Double,
+    val start: Int,
+    val end: Int,
+    val numberStart: Int
+)
+
+/**
+ * Finds a price limit in the sentence, if any: a below/above word
+ * with a number right after it. The number must read as an outcome
+ * price (35 is 0.35, 0.35 stays 0.35); 100 or more is dollars or an
+ * amount, never a Yes/No price. A number that belongs to a market's
+ * own question ("above 90k") is the market, not a limit.
+ */
+private fun findPriceLimit(
+    lower: String,
+    candidates: List<Market>,
+    language: VoiceLanguage
+): PriceLimit? {
+    val numbers = spokenNumbers(lower, language)
+    if (numbers.isEmpty()) return null
+    val tokens = tokenize(lower)
+    for (n in numbers) {
+        val before = tokens.filter { it.end <= n.start }.takeLast(2)
+        for (tok in before) {
+            val w = tok.word.lowercase()
+            val below = w in limitBelowWords(language)
+            val above = !below && w in limitAboveWords(language)
+            if (!below && !above) continue
+            val price = when {
+                n.value > 0 && n.value < 1 -> n.value
+                n.value >= 1 && n.value < 100 -> n.value / 100.0
+                else -> continue
+            }
+            if (candidates.any { numberAppearsIn(it.question, n.value) }) continue
+            return PriceLimit(below, price, tok.start, n.end, n.start)
+        }
+    }
+    return null
+}
+
+private fun formatOutcomePrice(v: Double): String =
+    String.format(java.util.Locale.US, "%.2f", v)
+
 /**
  * "Can I trade" in one language, for the HowToTrade branch: the
  * question form that needs no "how" word. Each language brings
@@ -776,10 +860,10 @@ fun parseBestVoiceUtterance(
             questionWords.any { l.contains(it) }
         }
         if (!anyQuestionLike) {
-            return VoiceParseResult.AskAgain("I did not catch that. Say it again.") to bestText
+            return VoiceParseResult.AskAgain(vocabFor(language).askAgain) to bestText
         }
     }
-    return (best ?: VoiceParseResult.AskAgain("I did not catch that. Say it again.")) to bestText
+    return (best ?: VoiceParseResult.AskAgain(vocabFor(language).askAgain)) to bestText
 }
 
 /**
@@ -825,14 +909,14 @@ fun parseBestVoiceUtteranceMulti(
         }
         if (!anyQuestionLike) {
             return Triple(
-                VoiceParseResult.AskAgain("I did not catch that. Say it again."),
+                VoiceParseResult.AskAgain(vocabFor(firstLanguage).askAgain),
                 bestText,
                 bestLanguage
             )
         }
     }
     return Triple(
-        best ?: VoiceParseResult.AskAgain("I did not catch that. Say it again."),
+        best ?: VoiceParseResult.AskAgain(vocabFor(bestLanguage).askAgain),
         bestText,
         bestLanguage
     )
@@ -860,7 +944,13 @@ private fun numberAppearsIn(question: String, value: Double): Boolean {
         candidates.add("$$whole")
     }
     candidates.add(value.toString())
-    return candidates.filter { it.isNotBlank() }.any { q.contains(it) }
+    // v1.1.29: a market question carries its window as a time
+    // ("6:35PM-6:40PM"), and a bare substring match reads the
+    // minutes as a price: "trade Bitcoin below 35" matched the 35
+    // in "6:35PM", so the amount was thrown away as part of the
+    // market. Times are never prices: strip them first.
+    val qNoTimes = q.replace(Regex("\\d{1,2}:\\d{2}(\\s?[ap]m)?"), "")
+    return candidates.filter { it.isNotBlank() }.any { qNoTimes.contains(it) }
 }
 
 /**
@@ -879,34 +969,27 @@ fun parseVoiceUtterance(
 ): VoiceParseResult {
     val vocab = vocabFor(language)
     val clean = normalizeHeard(text, language).trim()
-    if (clean.isEmpty()) return VoiceParseResult.AskAgain("I did not catch that. Say it again.")
+    if (clean.isEmpty()) return VoiceParseResult.AskAgain(vocab.askAgain)
     val lower = clean.lowercase()
 
     val startsQuestion = vocab.questionStarters.any { lower.startsWith(it) }
-    val hasTradeVerb = containsAnyWord(lower, vocab.buyVerbs) || containsAnyWord(lower, vocab.sellVerbs)
+    // v1.1.29: "trade" is an order verb too. "Trade Bitcoin for me
+    // below 35" fell to the question path, because "trade" is in
+    // neither the buy nor the sell verbs, and the asset-availability
+    // branch answered it with the market info instead of starting
+    // a trade. The price the user named was never used at all.
+    val hasTradeVerb = containsAnyWord(lower, vocab.buyVerbs) ||
+        containsAnyWord(lower, vocab.sellVerbs) ||
+        containsAnyWord(lower, tradeWords(language))
 
     if (startsQuestion || !hasTradeVerb) return parseVoiceQuestion(clean, markets, currentMarketId, language)
 
     // ---- Order path ----
-    // The side comes from the outcome word first (Yes is up, No is
-    // down), then from the verb. Whole-word matching, so "no" never
-    // fires on "know" and Turkish "al" never fires on "saldo".
-    val tokens = tokenize(lower).map { it.word.lowercase() }
-    val side: TradeSide = when {
-        vocab.downWords.any { it in tokens || (it.contains(' ') && lower.contains(it)) } -> TradeSide.DOWN
-        vocab.upWords.any { it in tokens || (it.contains(' ') && lower.contains(it)) } -> TradeSide.UP
-        containsAnyWord(lower, vocab.sellVerbs) -> TradeSide.DOWN
-        containsAnyWord(lower, vocab.buyVerbs) -> TradeSide.UP
-        else -> return VoiceParseResult.AskAgain("I did not catch whether to buy up or sell down. Say it again.")
-    }
-
-    // "Sell half" / "sell all": a fraction of the balance, never a
-    // dollar amount. Ask for the amount instead of guessing
-    // against the balance.
-    if (containsAnyWord(lower, fractionWords(language))) {
-        return VoiceParseResult.AskAgain(vocab.askAmountFraction)
-    }
-
+    // The market first: the price limit below needs the candidates
+    // to tell a limit from a market's own number ("above 90k" is
+    // the market, "below 35" is a limit), and the side comes after
+    // the limit, so a "below" that belongs to the limit never
+    // counts as a down direction.
     val mention = assetMention(clean)
     val asset = mention?.first
     val assetPos = mention?.second
@@ -922,7 +1005,80 @@ fun parseVoiceUtterance(
             VoiceParseResult.AskAgain("I could not find a $asset market open right now. Say it again.")
         }
     }
-    val market: Market = if (candidates.size == 1) {
+
+    // v1.1.29: a named price limit ("trade Bitcoin below 35") is a
+    // price, not an amount and not a direction. The number reads as
+    // an outcome price (35 is 0.35 on a Yes/No market); a number
+    // that belongs to a market's own question ("above 90k") is
+    // never a limit.
+    val limit = findPriceLimit(lower, candidates, language)
+
+    // The side comes from the outcome word first (Yes is up, No is
+    // down), then from the verb. Whole-word matching, so "no" never
+    // fires on "know" and Turkish "al" never fires on "saldo".
+    // Words inside the limit phrase never count: "below" in "below
+    // 35" is the limit, not a down direction. The side stays
+    // unknown here when nothing names it; the limit can still
+    // settle it from the prices, and otherwise the app asks.
+    val tokens = tokenize(lower).filter { tok ->
+        limit == null || tok.start < limit.start || tok.end > limit.end
+    }.map { it.word.lowercase() }
+    val side: TradeSide? = when {
+        vocab.downWords.any { it in tokens || (it.contains(' ') && lower.contains(it)) } -> TradeSide.DOWN
+        vocab.upWords.any { it in tokens || (it.contains(' ') && lower.contains(it)) } -> TradeSide.UP
+        containsAnyWord(lower, vocab.sellVerbs) -> TradeSide.DOWN
+        containsAnyWord(lower, vocab.buyVerbs) -> TradeSide.UP
+        else -> null
+    }
+
+    // "Sell half" / "sell all": a fraction of the balance, never a
+    // dollar amount. Ask for the amount instead of guessing
+    // against the balance.
+    if (containsAnyWord(lower, fractionWords(language))) {
+        return VoiceParseResult.AskAgain(vocab.askAmountFraction)
+    }
+
+    // A price limit settles the market and the side before the
+    // amount is read. When no market is at the price yet, the
+    // answer is the current prices against the limit, never a
+    // silent trade above it. The limit number itself never becomes
+    // the amount.
+    var limitMarket: Market? = null
+    var limitSide: TradeSide? = null
+    if (limit != null) {
+        val limitSides = when (side) {
+            TradeSide.UP -> listOf(TradeSide.UP)
+            TradeSide.DOWN -> listOf(TradeSide.DOWN)
+            null -> listOf(TradeSide.UP, TradeSide.DOWN)
+        }
+        fun meets(m: Market, s: TradeSide): Boolean {
+            val p = if (s == TradeSide.UP) m.p0 else m.p1
+            return p != null && if (limit.below) p <= limit.price else p >= limit.price
+        }
+        val meeting = candidates.filter { m -> limitSides.any { meets(m, it) } }
+        if (meeting.isEmpty()) {
+            val m = candidates[0]
+            val yes = m.p0?.let { formatOutcomePrice(it) } ?: "-"
+            val no = m.p1?.let { formatOutcomePrice(it) } ?: "-"
+            val marketLine = fill(vocab.answerMarket, "question" to m.question, "yes" to yes, "no" to no)
+            val limitLine = fill(
+                if (limit.below) vocab.answerLimitBelow else vocab.answerLimitAbove,
+                "limit" to formatOutcomePrice(limit.price)
+            )
+            return VoiceParseResult.Question(VoiceQuestion.Knowledge("$marketLine $limitLine"))
+        }
+        limitMarket = meeting[0]
+        limitSide = side ?: when {
+            meets(limitMarket, TradeSide.UP) && !meets(limitMarket, TradeSide.DOWN) -> TradeSide.UP
+            meets(limitMarket, TradeSide.DOWN) && !meets(limitMarket, TradeSide.UP) -> TradeSide.DOWN
+            else -> return VoiceParseResult.AskAgain("I did not catch whether to buy up or sell down. Say it again.")
+        }
+    }
+
+    val resolvedSide = side ?: limitSide
+        ?: return VoiceParseResult.AskAgain("I did not catch whether to buy up or sell down. Say it again.")
+
+    val market: Market = limitMarket ?: if (candidates.size == 1) {
         candidates[0]
     } else {
         // More than one market for the coin: use the price or direction
@@ -956,7 +1112,11 @@ fun parseVoiceUtterance(
     // number anywhere. Otherwise a number after the coin counts as the
     // amount only when it is not part of the market's price: "buy
     // bitcoin 50" is $50, "buy bitcoin above 90k" is not $90,000.
-    val numbers = spokenNumbers(clean, language)
+    // A price limit's number never counts as the amount either:
+    // "below 35" is the price, not $35.
+    val numbers = spokenNumbers(clean, language).filter { n ->
+        limit == null || n.start != limit.numberStart
+    }
     val amountNumber = numbers.firstOrNull { assetPos == null || it.end <= assetPos }
         ?: numbers.firstOrNull { n -> candidates.none { numberAppearsIn(it.question, n.value) } }
         ?: return VoiceParseResult.AskAgain(vocab.askAmount)
@@ -965,14 +1125,14 @@ fun parseVoiceUtterance(
     if (amountErr != null) return VoiceParseResult.AskAgain(amountErr)
     if (amount <= 0) return VoiceParseResult.AskAgain(vocab.askAmount)
 
-    val sideWord = if (side == TradeSide.UP) "Yes" else "No"
-    val verb = if (side == TradeSide.UP) "Buy" else "Sell"
+    val sideWord = if (resolvedSide == TradeSide.UP) "Yes" else "No"
+    val verb = if (resolvedSide == TradeSide.UP) "Buy" else "Sell"
     val readback = "$verb ${formatVoiceAmount(amount)} $sideWord on ${marketShortLabel(market)}"
     return VoiceParseResult.Order(
         VoiceOrder(
             marketId = market.id,
             marketLabel = marketShortLabel(market),
-            side = side,
+            side = resolvedSide,
             amountUsd = amount,
             readback = readback
         )

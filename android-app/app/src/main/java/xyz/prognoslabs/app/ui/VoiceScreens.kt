@@ -56,6 +56,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import xyz.prognoslabs.app.data.SUPPORTED_VOICE_LANGUAGES
 import xyz.prognoslabs.app.data.VoiceOrder
 import xyz.prognoslabs.app.data.fill
 import xyz.prognoslabs.app.data.isEnrollComplete
@@ -580,7 +581,7 @@ fun VoiceEnrollScreen(vm: AppViewModel, onBack: () -> Unit) {
     val c = appColors()
     val state by vm.enrollState.collectAsState()
     val enrolled by vm.voiceEnrolled.collectAsState()
-    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
@@ -596,11 +597,69 @@ fun VoiceEnrollScreen(vm: AppViewModel, onBack: () -> Unit) {
             Text("Set up your voice", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = c.ink)
         }
         Spacer(modifier = Modifier.height(16.dp))
+        // v1.1.29: the language comes first. The phrases are only
+        // shown once the user has picked the language they speak,
+        // so a speaker of another language never has to read the
+        // test phrases in English.
+        val voiceLanguage by vm.voiceLanguage.collectAsState()
+        if (!state.languagePicked) {
+            Text(
+                "Choose your language first.",
+                fontSize = 15.sp,
+                color = c.ink
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "The phrases you say will be in this language.",
+                fontSize = 14.sp,
+                color = c.grey
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            SUPPORTED_VOICE_LANGUAGES.forEach { lang ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp).clickable { vm.pickEnrollLanguage(lang) },
+                    colors = CardDefaults.cardColors(containerColor = c.surface),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, c.border),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            lang.displayName,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = c.ink,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (lang == voiceLanguage) {
+                            Text("Selected", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Lime)
+                        }
+                    }
+                }
+            }
+        } else {
         Text(
             "Say each phrase out loud.",
             fontSize = 15.sp,
             color = c.ink
         )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth().clickable { vm.changeEnrollLanguage() },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Language: ${voiceLanguage.displayName}",
+                fontSize = 13.sp,
+                fontFamily = PrognosMonoFamily,
+                color = c.grey,
+                modifier = Modifier.weight(1f)
+            )
+            Text("Change", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Lime)
+        }
         // v1.1.14: when a voice is already set up from an earlier
         // session, this screen is a re-do. Say so plainly, and show
         // this session's real progress: unlocked only after all
@@ -717,6 +776,7 @@ fun VoiceEnrollScreen(vm: AppViewModel, onBack: () -> Unit) {
             ) {
                 Text("Done", fontWeight = FontWeight.Bold)
             }
+        }
         }
     }
 }

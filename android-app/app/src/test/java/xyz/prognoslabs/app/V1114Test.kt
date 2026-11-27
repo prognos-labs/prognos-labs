@@ -38,7 +38,7 @@ class V1114Test {
     @Test
     fun versionIs1123() {
         assertEquals(38, BuildConfig.VERSION_CODE)
-        assertEquals("1.1.28", BuildConfig.VERSION_NAME)
+        assertEquals("1.1.29", BuildConfig.VERSION_NAME)
     }
 
     // ---- Fix 1: settings are compact drop-down rows ----

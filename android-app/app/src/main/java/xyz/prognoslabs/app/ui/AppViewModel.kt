@@ -69,6 +69,7 @@ import xyz.prognoslabs.app.data.VoiceFeatures
 import xyz.prognoslabs.app.data.VoiceHistoryEntry
 import xyz.prognoslabs.app.data.VoiceHistoryOutcome
 import xyz.prognoslabs.app.data.VoiceOrder
+import xyz.prognoslabs.app.data.assetMention
 import xyz.prognoslabs.app.data.VoiceParseResult
 import xyz.prognoslabs.app.data.VoiceQuestion
 import xyz.prognoslabs.app.data.VoiceStore
@@ -209,7 +210,11 @@ data class EnrollState(
     val current: Int = 0,
     val listening: Boolean = false,
     val error: String? = null,
-    val complete: Boolean = false
+    val complete: Boolean = false,
+    /** v1.1.29: the user picks their language first, before the
+     * voice test, so the phrases come in a language they speak.
+     * False until a language is picked on the enroll screen. */
+    val languagePicked: Boolean = false
 )
 
 class AppViewModel(app: Application) : AndroidViewModel(app) {
@@ -375,6 +380,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * answers, enrollment and the challenge all follow it. */
     private val _voiceLanguage = MutableStateFlow(voiceEngine.voiceLanguage())
     val voiceLanguage: StateFlow<VoiceLanguage> = _voiceLanguage.asStateFlow()
+
+    /** v1.1.29: the last market the voice showed or traded, so a
+     * follow-up ("yes, trade it from there", "trade that one")
+     * has a market to trade. The detail screen's market wins when
+     * one is open; this is the fallback. Cleared when the call
+     * ends, so a later call never trades a stale market. */
+    private var lastVoiceMarketId: String? = null
 
     /** True when the phone's language is one this build supports
      * for voice. When false the app says so plainly and listens
@@ -1177,6 +1189,7 @@ private fun restartListening() {
             clearChallengeState()
             voicePendingOrder = null
             voicePendingHeard = null
+            lastVoiceMarketId = null
         }
         _voiceSheet.value = null
     }
@@ -1325,11 +1338,11 @@ private fun restartListening() {
             ) {
                 parseBestVoiceUtteranceMulti(
                     event.candidates.zip(event.candidateLanguages),
-                    _home.value.markets, _detail.value.market?.id
+                    _home.value.markets, _detail.value.market?.id ?: lastVoiceMarketId
                 )
             } else {
                 val (p, h) = parseBestVoiceUtterance(
-                    event.candidates, _home.value.markets, _detail.value.market?.id,
+                    event.candidates, _home.value.markets, _detail.value.market?.id ?: lastVoiceMarketId,
                     event.detectedLanguage ?: setLang
                 )
                 Triple(p, h, event.detectedLanguage ?: setLang)
@@ -1340,7 +1353,10 @@ private fun restartListening() {
         // is what puts the words on screen.
         _voiceListeningText.value = heard.take(200)
         when (parsed) {
-            is VoiceParseResult.Order -> startVoiceCheck(heard, parsed.order)
+            is VoiceParseResult.Order -> {
+                lastVoiceMarketId = parsed.order.marketId
+                startVoiceCheck(heard, parsed.order)
+            }
             is VoiceParseResult.Navigate -> {
                 recordVoiceHistory(heard, VoiceHistoryOutcome.NAVIGATED)
                 // v1.1.28: the navigation itself is the confirmation.
@@ -1370,6 +1386,18 @@ private fun restartListening() {
                     )?.first ?: answerVoiceQuestion(parsed.question, turnLang)
                 } else {
                     answerVoiceQuestion(parsed.question, turnLang)
+                }
+                // v1.1.29: remember the market just shown, so the
+                // follow-up ("yes, trade it from there") has one.
+                when (parsed.question) {
+                    is VoiceQuestion.MarketInfo -> lastVoiceMarketId = parsed.question.marketId
+                    is VoiceQuestion.Price -> lastVoiceMarketId =
+                        _home.value.markets.firstOrNull { it.asset == parsed.question.asset }?.id
+                            ?: lastVoiceMarketId
+                    is VoiceQuestion.Knowledge -> assetMention(heard)?.first?.let { asset ->
+                        _home.value.markets.firstOrNull { it.asset == asset }?.id
+                    }?.let { lastVoiceMarketId = it }
+                    else -> {}
                 }
                 recordVoiceHistory(heard, VoiceHistoryOutcome.ANSWERED)
                 if (parsed.question.isConversational) {
@@ -1884,16 +1912,41 @@ private fun restartListening() {
     fun startEnrollment() {
         enrollSamples.clear()
         val assigned = voiceStore.loadEnrollPhrases()
+        if (assigned != null && assigned.size == 3 && assigned.distinct().size == 3) {
+            // Phrases dealt in an earlier session mean the language
+            // was already picked, so the test shows straight away.
+            _enrollState.value = EnrollState(phrases = assigned, languagePicked = true)
+            return
+        }
+        // v1.1.29: the language comes first. A first-time setup
+        // deals no phrases yet: the language picker shows, and
+        // picking a language deals the phrases in that language.
+        _enrollState.value = EnrollState()
+    }
+
+    /** The user picked their language on the enroll screen, before
+     * the voice test. The voice language follows the pick, and the
+     * three phrases are dealt from that language's pool, so the
+     * test phrases are words the user can actually say. Picking
+     * the same language again reuses the stored phrases, so
+     * coming back mid-enrollment keeps the same three; picking a
+     * different language deals a fresh three in that language. */
+    fun pickEnrollLanguage(language: VoiceLanguage) {
+        val sameLanguage = _voiceLanguage.value == language
+        setVoiceLanguage(language)
+        enrollSamples.clear()
+        val assigned = if (sameLanguage) voiceStore.loadEnrollPhrases() else null
         val phrases = if (assigned != null && assigned.size == 3 && assigned.distinct().size == 3) {
             assigned
         } else {
+            voiceStore.clearEnrollPhrases()
             pickEnrollPhrases(
-                vocabFor(_voiceLanguage.value).enrollPhrases, 3, Random.Default
+                vocabFor(language).enrollPhrases, 3, Random.Default
             ).also {
                 voiceStore.saveEnrollPhrases(it)
             }
         }
-        _enrollState.value = EnrollState(phrases = phrases)
+        _enrollState.value = EnrollState(phrases = phrases, languagePicked = true)
     }
 
     /** The user tapped the mic on one enrollment phrase. Enrollment
@@ -1980,6 +2033,13 @@ private fun restartListening() {
         _voiceEnrolled.value = false
         enrollSamples.clear()
         _enrollState.value = EnrollState()
+    }
+
+    /** Back to the language picker from the phrase test, so the
+     * user can switch the enrollment language. Picking a language
+     * again deals fresh phrases in it. */
+    fun changeEnrollLanguage() {
+        _enrollState.value = _enrollState.value.copy(languagePicked = false)
     }
 
     override fun onCleared() {
