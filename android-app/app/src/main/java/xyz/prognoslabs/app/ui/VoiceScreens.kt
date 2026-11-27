@@ -616,26 +616,53 @@ fun VoiceEnrollScreen(vm: AppViewModel, onBack: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(16.dp))
             SUPPORTED_VOICE_LANGUAGES.forEach { lang ->
+                // v1.1.30: same designed rows as the settings picker.
+                // Each language shows its own name underneath, and the
+                // picked one gets a lime tint, a lime border and a
+                // lime check, not a word.
+                val picked = lang == voiceLanguage
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp).clickable { vm.pickEnrollLanguage(lang) },
-                    colors = CardDefaults.cardColors(containerColor = c.surface),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (picked) Lime.copy(alpha = 0.25f) else c.surface
+                    ),
                     shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, c.border),
+                    border = BorderStroke(1.dp, if (picked) Lime else c.border),
                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            lang.displayName,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = c.ink,
-                            modifier = Modifier.weight(1f)
-                        )
-                        if (lang == voiceLanguage) {
-                            Text("Selected", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Lime)
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                lang.displayName,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = c.ink
+                            )
+                            Text(
+                                lang.nativeName,
+                                fontSize = 13.sp,
+                                fontFamily = PrognosMonoFamily,
+                                color = c.grey
+                            )
+                        }
+                        if (picked) {
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .background(Lime),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Filled.Check,
+                                    contentDescription = null,
+                                    tint = Color(0xFF111111),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         }
                     }
                 }

@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -31,6 +32,7 @@ import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LightMode
@@ -65,6 +67,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
@@ -1510,7 +1513,7 @@ Row(
         Text("Voice language", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = c.ink)
         Spacer(modifier = Modifier.height(2.dp))
         Text(
-            voiceLanguage.displayName + if (voiceLanguage.code == "ig") " (On-device)" else " (Cloud ASR)",
+            voiceLanguage.displayName,
             fontSize = 13.sp,
             color = c.grey
         )
@@ -1519,39 +1522,86 @@ Row(
 }
 
 if (showLanguagePicker) {
+    // v1.1.30: the language list is a designed sheet, not a plain
+    // list. Cream in light mode, one thin black line under the
+    // title, each language with its own name underneath, and the
+    // picked one marked with a lime check, not a word.
     androidx.compose.material3.AlertDialog(
         onDismissRequest = { showLanguagePicker = false },
-        title = { Text("Voice language", fontWeight = FontWeight.Bold) },
+        containerColor = if (dark) c.surface else Color(0xFFF5F2EB),
+        title = {
+            Column {
+                Text("Voice language", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = c.ink)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "Voice listens and answers in this language.",
+                    fontSize = 13.sp,
+                    color = c.grey
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider(color = c.ink, thickness = 1.dp)
+            }
+        },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 xyz.prognoslabs.app.data.SUPPORTED_VOICE_LANGUAGES.forEach { lang ->
+                    val picked = lang == voiceLanguage
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (picked) Lime.copy(alpha = 0.30f) else Color.Transparent)
                             .clickable {
                                 vm.setVoiceLanguage(lang)
                                 showLanguagePicker = false
                             }
-                            .padding(vertical = 10.dp),
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = lang.displayName,
-                            fontSize = 15.sp,
-                            fontWeight = if (lang == voiceLanguage) FontWeight.Bold else FontWeight.Normal,
-                            color = c.ink,
-                            modifier = Modifier.weight(1f)
-                        )
-                        if (lang == voiceLanguage) {
-                            Text("Selected", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Lime)
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = lang.displayName,
+                                fontSize = 15.sp,
+                                fontWeight = if (picked) FontWeight.Bold else FontWeight.SemiBold,
+                                color = c.ink
+                            )
+                            Text(
+                                text = lang.nativeName,
+                                fontSize = 13.sp,
+                                fontFamily = PrognosMonoFamily,
+                                color = c.grey
+                            )
+                        }
+                        if (picked) {
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .background(Lime),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Filled.Check,
+                                    contentDescription = null,
+                                    tint = Color(0xFF111111),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         }
                     }
                 }
             }
         },
         confirmButton = {
-            androidx.compose.material3.TextButton(onClick = { showLanguagePicker = false }) {
-                Text("Close")
+            androidx.compose.material3.Button(
+                onClick = { showLanguagePicker = false },
+                shape = RoundedCornerShape(12.dp),
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF111111),
+                    contentColor = Color.White
+                )
+            ) {
+                Text("Close", fontWeight = FontWeight.Bold)
             }
         }
     )

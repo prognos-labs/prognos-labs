@@ -22,20 +22,21 @@ import java.util.Locale
 enum class VoiceLanguage(
     val code: String,
     val displayName: String,
+    val nativeName: String,
     val requiresCloudAsr: Boolean = false
 ) {
-    ENGLISH("en", "English"),
-    SPANISH("es", "Spanish"),
-    FRENCH("fr", "French"),
-    PORTUGUESE("pt", "Portuguese"),
-    GERMAN("de", "German"),
-    TURKISH("tr", "Turkish"),
-    ARABIC("ar", "Arabic"),
-    IGBO("ig", "Igbo", requiresCloudAsr = true),
-    YORUBA("yo", "Yoruba", requiresCloudAsr = true),
-    HAUSA("ha", "Hausa", requiresCloudAsr = true),
-    HEBREW("he", "Hebrew", requiresCloudAsr = true),
-    CHINESE("zh", "Chinese", requiresCloudAsr = false)
+    ENGLISH("en", "English", "English"),
+    SPANISH("es", "Spanish", "Español"),
+    FRENCH("fr", "French", "Français"),
+    PORTUGUESE("pt", "Portuguese", "Português"),
+    GERMAN("de", "German", "Deutsch"),
+    TURKISH("tr", "Turkish", "Türkçe"),
+    ARABIC("ar", "Arabic", "العربية"),
+    IGBO("ig", "Igbo", "Igbo", requiresCloudAsr = true),
+    YORUBA("yo", "Yoruba", "Yorùbá", requiresCloudAsr = true),
+    HAUSA("ha", "Hausa", "Hausa", requiresCloudAsr = true),
+    HEBREW("he", "Hebrew", "עברית", requiresCloudAsr = true),
+    CHINESE("zh", "Chinese", "中文", requiresCloudAsr = false)
 }
 
 val SUPPORTED_VOICE_LANGUAGES: List<VoiceLanguage> = VoiceLanguage.entries.toList()
