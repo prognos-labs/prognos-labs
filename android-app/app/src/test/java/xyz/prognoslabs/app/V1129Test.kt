@@ -34,6 +34,13 @@ import xyz.prognoslabs.app.model.TagDto
  *    still deals the test phrases in the Settings language with
  *    no picker, so a speaker of another language has to say
  *    English phrases.
+ * 3. The second video showed one more: Flint said "Tell me about
+ *    Prognos Labs" and Groq heard "Tell me about food, Ms. Labs",
+ *    which the app refused as out of scope. The brand's second
+ *    word survives the mishearing, so "tell me about ... labs"
+ *    now answers about Prognos Labs. A repeat of the same sentence
+ *    was also swallowed with no answer at all; that one is still
+ *    open, it needs the engine, not the parser.
  *
  * Fixes, all proven here through the pure parser, plus the
  * enrollment screen (proven by a source check: the picker is
@@ -92,6 +99,23 @@ class V1129Test {
         assertTrue(text.contains("0.50"))
         assertTrue(text.contains("0.35"))
         assertTrue(text.contains("above"))
+    }
+
+    @Test
+    fun misheardBrandNameStillAnswersAboutPrognosLabs() {
+        // Video 2, audio 6.5 s: Flint said "Tell me about Prognos
+        // Labs". Groq heard "Tell me about food, Ms. Labs" and the
+        // app refused it as out of scope. The brand's second word
+        // survives the mishearing, so "tell me about ... labs" is
+        // still a question about Prognos Labs.
+        val parsed = parseVoiceUtterance(
+            "Tell me about food, Ms. Labs", markets, null, VoiceLanguage.ENGLISH
+        )
+        assertTrue(parsed is VoiceParseResult.Question)
+        val answer = (parsed as VoiceParseResult.Question).question
+        assertTrue(answer is VoiceQuestion.Knowledge)
+        val text = (answer as VoiceQuestion.Knowledge).answer
+        assertTrue(text.contains("Prognos Labs is a prediction market"))
     }
 
     @Test

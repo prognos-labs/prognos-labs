@@ -28,7 +28,13 @@ import xyz.prognoslabs.app.model.NewsItem
 private fun isPrognos(t: String) = t.contains("prognos") || t.contains("prognose") ||
     t.contains("pronios") || t.contains("prognus") || t.contains("prognoz") ||
     t.contains("provenos") || t.contains("probe news") || t.contains("nefrognos") ||
-    t.contains("provenal")
+    t.contains("provenal") ||
+    // v1.1.29: Groq mishears the brand as "food, Ms. Labs" — the
+    // first word is lost but "labs" survives, so a "tell me about
+    // ... labs" question is still about Prognos Labs. Every use of
+    // this check also needs an about word, so a bare "labs" never
+    // answers on its own.
+    t.contains("labs")
 
 /**
  * Traditional to simplified Chinese, for the trigger characters only.

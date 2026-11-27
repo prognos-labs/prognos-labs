@@ -1065,7 +1065,7 @@ fun parseVoiceUtterance(
                 if (limit.below) vocab.answerLimitBelow else vocab.answerLimitAbove,
                 "limit" to formatOutcomePrice(limit.price)
             )
-            return VoiceParseResult.Question(VoiceQuestion.Knowledge("$marketLine $limitLine"))
+            return VoiceParseResult.Question(VoiceQuestion.Knowledge("$marketLine $limitLine"), text)
         }
         limitMarket = meeting[0]
         limitSide = side ?: when {
