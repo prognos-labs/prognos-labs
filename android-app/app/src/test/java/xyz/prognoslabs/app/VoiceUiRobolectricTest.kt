@@ -130,6 +130,18 @@ class VoiceUiRobolectricTest {
         composeRule.onNodeWithText("Settings").assertIsDisplayed()
     }
 
+    /** v1.1.29: enrollment picks the language first. The phrase
+     * test only shows after a language is picked, so tap English
+     * when the picker is up. When phrases were already dealt (a
+     * stored set from an earlier test in this VM), the picker is
+     * already past and there is nothing to tap. */
+    private fun pickEnrollLanguageIfNeeded() {
+        if (!vm().enrollState.value.languagePicked) {
+            composeRule.onNodeWithText("English").performScrollTo().performClick()
+            composeRule.waitForIdle()
+        }
+    }
+
     /** The dashboard header toggle, the same one Flint taps. The flip
      * lands through DataStore on an IO thread, so wait for the flow.
      * Dark mode persists in DataStore, so a previous test in this
@@ -287,6 +299,7 @@ class VoiceUiRobolectricTest {
         goToSettings()
         composeRule.onNodeWithText("Set up your voice").performScrollTo().performClick()
         composeRule.waitForIdle()
+        pickEnrollLanguageIfNeeded()
         composeRule.onNodeWithText("Set up your voice").assertIsDisplayed()
         // The phrases are dealt at random from the pool of 24, so
         // the test reads the assignment the screen was given instead
@@ -341,6 +354,7 @@ class VoiceUiRobolectricTest {
         composeRule.waitForIdle()
         composeRule.onNodeWithText("Set up your voice").performScrollTo().performClick()
         composeRule.waitForIdle()
+        pickEnrollLanguageIfNeeded()
         composeRule.onNodeWithText("Set up your voice").assertIsDisplayed()
         composeRule.onNodeWithText("0 of 3 done").assertIsDisplayed()
     }
@@ -399,6 +413,7 @@ class VoiceUiRobolectricTest {
         goToSettings()
         composeRule.onNodeWithText("Set up your voice").performScrollTo().performClick()
         composeRule.waitForIdle()
+        pickEnrollLanguageIfNeeded()
         composeRule.onNodeWithText("0 of 3 done").assertIsDisplayed()
         composeRule.onAllNodesWithText("Voice unlocked").fetchSemanticsNodes().let { nodes ->
             assertEquals("Voice unlocked must not show at 0 of 3", 0, nodes.size)

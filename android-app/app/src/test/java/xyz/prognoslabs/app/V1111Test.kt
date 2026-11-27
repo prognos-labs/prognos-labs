@@ -214,11 +214,15 @@ class V1111Test {
     @Test
     fun enrollmentUsesTheAssignedPhrases() {
         val vm = readSource("app/src/main/java/xyz/prognoslabs/app/ui/AppViewModel.kt")
-        assertTrue(vm.contains("vocabFor(_voiceLanguage.value).enrollPhrases, 3"))
+        // v1.1.29: the language comes first. Picking a language
+        // deals the three phrases from that language's pool.
+        assertTrue(vm.contains("vocabFor(language).enrollPhrases, 3"))
         assertTrue(vm.contains("saveEnrollPhrases"))
         assertTrue(vm.contains("loadEnrollPhrases"))
         assertTrue(vm.contains("clearEnrollPhrases"))
         assertTrue(vm.contains("_enrollState.value.phrases.indices"))
+        assertTrue(vm.contains("pickEnrollLanguage"))
+        assertTrue(vm.contains("languagePicked"))
         assertFalse("The fixed phrase list must be gone", vm.contains("VOICE_ENROLL_PHRASES"))
     }
 

@@ -985,6 +985,15 @@ fun parseVoiceUtterance(
     if (startsQuestion || !hasTradeVerb) return parseVoiceQuestion(clean, markets, currentMarketId, language)
 
     // ---- Order path ----
+    // "Sell half" / "sell all": a fraction of the balance, never a
+    // dollar amount. Ask for the amount instead of guessing
+    // against the balance. This needs no market at all, so it runs
+    // before the market lookup, as it did before v1.1.29 moved the
+    // lookup up for the price limit.
+    if (containsAnyWord(lower, fractionWords(language))) {
+        return VoiceParseResult.AskAgain(vocab.askAmountFraction)
+    }
+
     // The market first: the price limit below needs the candidates
     // to tell a limit from a market's own number ("above 90k" is
     // the market, "below 35" is a limit), and the side comes after
@@ -997,13 +1006,6 @@ fun parseVoiceUtterance(
         asset != null -> markets.filter { it.asset == asset }
         currentMarketId != null -> markets.filter { it.id == currentMarketId }
         else -> emptyList()
-    }
-    if (candidates.isEmpty()) {
-        return if (asset == null) {
-            VoiceParseResult.AskAgain(vocab.askMarket)
-        } else {
-            VoiceParseResult.AskAgain("I could not find a $asset market open right now. Say it again.")
-        }
     }
 
     // v1.1.29: a named price limit ("trade Bitcoin below 35") is a
@@ -1031,11 +1033,27 @@ fun parseVoiceUtterance(
         else -> null
     }
 
-    // "Sell half" / "sell all": a fraction of the balance, never a
-    // dollar amount. Ask for the amount instead of guessing
-    // against the balance.
-    if (containsAnyWord(lower, fractionWords(language))) {
-        return VoiceParseResult.AskAgain(vocab.askAmountFraction)
+    // v1.1.29: the trade verb alone does not make an order. "Can I
+    // trade Bitcoin" ("Posso negociar Bitcoin?", "Puis-je trader
+    // le Bitcoin ?") names no price, no amount and no side, so it
+    // is the availability question, and the question path answers
+    // it. An order always names a price, an amount or a side. A
+    // follow-up with no asset ("trade that one") is different: the
+    // market is the one already on screen, so with a current market
+    // it stays on the order path and the app asks up or down.
+    if (limit == null && side == null &&
+        spokenNumbers(clean, language).isEmpty() &&
+        (mention != null || currentMarketId == null)
+    ) {
+        return parseVoiceQuestion(clean, markets, currentMarketId, language)
+    }
+
+    if (candidates.isEmpty()) {
+        return if (asset == null) {
+            VoiceParseResult.AskAgain(vocab.askMarket)
+        } else {
+            VoiceParseResult.AskAgain("I could not find a $asset market open right now. Say it again.")
+        }
     }
 
     // A price limit settles the market and the side before the
