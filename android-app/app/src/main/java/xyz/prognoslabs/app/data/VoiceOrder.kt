@@ -95,10 +95,30 @@ sealed class VoiceParseResult {
     /** Voice navigation: open a market or a screen in the app. */
     data class Navigate(val route: String, val label: String) : VoiceParseResult()
     /** Unclear: the app must ask the user to say it again, never guess. */
-    data class AskAgain(val message: String) : VoiceParseResult()
+    data class AskAgain(val message: String, val pending: PendingDisambiguation? = null) : VoiceParseResult()
     /** Not about Prognos Labs trading: the voice does not answer it. */
     data class OutOfScope(val message: String) : VoiceParseResult()
 }
+
+/**
+ * v1.1.31: what the app asked about when it could not tell two
+ * markets apart: the coin, the side and the amount it already has,
+ * and the markets it was choosing between. The next thing the user
+ * says answers it ("Bitcoin above 58k", "the 6:35 one"), so the
+ * follow-up is parsed against these markets instead of starting
+ * fresh. Flint's v1.1.30 video showed the loop this fixes: the app
+ * asked "say the price", he said "Bitcoin above 58k", and the app
+ * had already forgotten the question, so it answered "I did not
+ * catch that" and asked for the price again. Single use: the
+ * ViewModel clears it after one utterance unless the new answer
+ * carries a fresh one.
+ */
+data class PendingDisambiguation(
+    val asset: String?,
+    val side: TradeSide?,
+    val amountUsd: Double?,
+    val candidateIds: List<String>
+)
 
 /** The answer to a plain "hello" or "hi". No "how are you" in it. */
 const val GREETING_HELLO_ANSWER = "Hi there. What would you like to do?"
@@ -488,6 +508,12 @@ private fun findPriceLimit(
     if (numbers.isEmpty()) return null
     val tokens = tokenize(lower)
     for (n in numbers) {
+        // v1.1.31: a number that follows another number is an
+        // amount, not a limit. "Buy bitcoin above 58k 50" put the
+        // 50 two tokens after "above", and the old two-token
+        // lookback read it as a 0.50 limit and threw the $50 away.
+        val immediate = tokens.filter { it.end <= n.start }.lastOrNull()
+        if (immediate != null && digitNumber(immediate.word) != null) continue
         val before = tokens.filter { it.end <= n.start }.takeLast(2)
         for (tok in before) {
             val w = tok.word.lowercase()
@@ -832,14 +858,15 @@ fun parseBestVoiceUtterance(
     candidates: List<String>,
     markets: List<Market>,
     currentMarketId: String? = null,
-    language: VoiceLanguage = VoiceLanguage.ENGLISH
+    language: VoiceLanguage = VoiceLanguage.ENGLISH,
+    pending: PendingDisambiguation? = null
 ): Pair<VoiceParseResult, String> {
     var best: VoiceParseResult? = null
     var bestScore = -1
     var bestText = ""
     for (candidate in candidates) {
         val norm = normalizeHeard(candidate, language)
-        val parsed = parseVoiceUtterance(norm, markets, currentMarketId, language)
+        val parsed = parseVoiceUtterance(norm, markets, currentMarketId, language, pending)
         val score = parseScore(parsed)
         if (score > bestScore) {
             bestScore = score
@@ -883,7 +910,8 @@ fun parseBestVoiceUtterance(
 fun parseBestVoiceUtteranceMulti(
     candidates: List<Pair<String, VoiceLanguage>>,
     markets: List<Market>,
-    currentMarketId: String? = null
+    currentMarketId: String? = null,
+    pending: PendingDisambiguation? = null
 ): Triple<VoiceParseResult, String, VoiceLanguage> {
     var best: VoiceParseResult? = null
     var bestScore = -1
@@ -891,7 +919,7 @@ fun parseBestVoiceUtteranceMulti(
     var bestLanguage = candidates.firstOrNull()?.second ?: VoiceLanguage.ENGLISH
     for ((candidate, language) in candidates) {
         val norm = normalizeHeard(candidate, language)
-        val parsed = parseVoiceUtterance(norm, markets, currentMarketId, language)
+        val parsed = parseVoiceUtterance(norm, markets, currentMarketId, language, pending)
         val score = parseScore(parsed)
         if (score > bestScore) {
             bestScore = score
@@ -953,6 +981,156 @@ private fun numberAppearsIn(question: String, value: Double): Boolean {
     return candidates.filter { it.isNotBlank() }.any { qNoTimes.contains(it) }
 }
 
+/** The time window inside a market question ("6:35PM-6:40PM ET"),
+ * as the user would say it, or null when the market has none. */
+private fun marketWindow(question: String): String? {
+    val m = Regex("""(\d{1,2}:\d{2}\s?[AP]M)\s*-\s*(\d{1,2}:\d{2}\s?[AP]M)""").find(question) ?: return null
+    return "${m.groupValues[1]} to ${m.groupValues[2]}"
+}
+
+/** The strike price inside a market question ("58k", "$90,000"),
+ * as written there, or null when the market names no price. Times
+ * are stripped first, so "6:35PM" never reads as a price. */
+private fun marketStrike(question: String): String? {
+    val q = question.replace(Regex("""\d{1,2}:\d{2}(\s?[ap]m)?"""), "")
+    Regex("""\$?\d[\d,]*(\.\d+)?\s*k""").find(q)?.let { return it.value.trim() }
+    Regex("""\$\d[\d,]*""").find(q)?.let { return it.value.trim() }
+    return null
+}
+
+/**
+ * v1.1.31: the question the app asks when two markets for one coin
+ * cannot be told apart. It asks for what actually differs between
+ * them, and it names the real options instead of a made-up example.
+ * The old text always said "for example above 90k", even when no
+ * 90k market existed and the markets differed by time, not price,
+ * so the user answered a price and the app asked for a price again.
+ */
+private fun disambiguationMessage(asset: String?, candidates: List<Market>): String {
+    val windows = candidates.mapNotNull { marketWindow(it.question) }.distinct()
+    if (windows.size >= 2) {
+        val listed = windows.take(3).joinToString(", or ")
+        return "I found more than one $asset market. Which time? $listed?"
+    }
+    val struck = candidates.firstOrNull { marketStrike(it.question) != null }
+    if (struck != null) {
+        val strike = marketStrike(struck.question)!!
+        val dir = if (struck.question.lowercase().contains("below")) "below" else "above"
+        return "I found more than one $asset market. Say the price, for example $dir $strike."
+    }
+    return "I found more than one $asset market. Say the price or the time."
+}
+
+/**
+ * v1.1.31: one market's score when the user is picking between
+ * markets for the same coin. A number from the market's own
+ * question counts most; the above/below word counts a little; a
+ * time the user named ("the 6:35 one") counts as much as the
+ * number, because the 5-minute markets differ by time, not price.
+ */
+private fun disambiguationScore(lower: String, market: Market, numbers: List<SpokenNumber>): Int {
+    var score = 0
+    for (n in numbers) if (numberAppearsIn(market.question, n.value)) score += 2
+    if ((lower.contains("above") || lower.contains("over")) && market.question.lowercase().contains("above")) score += 1
+    if ((lower.contains("below") || lower.contains("under")) && market.question.lowercase().contains("below")) score += 1
+    val time = Regex("""\d{1,2}:\d{2}""").find(lower)?.value
+    if (time != null && market.question.contains(time)) score += 2
+    return score
+}
+
+/**
+ * v1.1.31: the follow-up to a disambiguation question. Returns null
+ * when the sentence is not a price or time answer at all, so the
+ * normal parse runs instead. A price the user names settles the
+ * market when it matches exactly one candidate; a time does the
+ * same for the window markets. A number right after above/below is
+ * the price, never the amount. When nothing matches, the question
+ * is asked again with the real options, and the pending answer
+ * stays live for one more try. The side and the amount come from
+ * the first turn when the follow-up does not name them.
+ */
+private fun resolvePendingAnswer(
+    clean: String,
+    lower: String,
+    markets: List<Market>,
+    pending: PendingDisambiguation,
+    language: VoiceLanguage
+): VoiceParseResult? {
+    val vocab = vocabFor(language)
+    val numbers = spokenNumbers(clean, language)
+    val hasPriceWord = lower.contains("above") || lower.contains("over") ||
+        lower.contains("below") || lower.contains("under")
+    val time = Regex("""\d{1,2}:\d{2}""").find(lower)?.value
+    if (!hasPriceWord && time == null) return null
+    val candidates = markets.filter { it.id in pending.candidateIds }
+        .ifEmpty { markets.filter { it.asset == pending.asset } }
+    if (candidates.isEmpty()) return null
+    var best: Market? = null
+    var bestScore = 0
+    val tied = mutableListOf<Market>()
+    for (m in candidates) {
+        val score = disambiguationScore(lower, m, numbers)
+        if (score > bestScore) {
+            bestScore = score
+            best = m
+            tied.clear()
+            tied.add(m)
+        } else if (score == bestScore && score > 0) {
+            tied.add(m)
+        }
+    }
+    if (best == null || bestScore == 0) {
+        return VoiceParseResult.AskAgain(disambiguationMessage(pending.asset, candidates), pending)
+    }
+    if (tied.size > 1) {
+        // Same price, different windows: the soonest-expiring
+        // market, and the read-back names its window, so the user
+        // can still say no.
+        best = tied.minByOrNull { if (it.end > 0) it.end else Long.MAX_VALUE } ?: best
+    }
+    val market = best!!
+    // No limit phrase is stripped here: "above" in "above 58k"
+    // is also the up word, exactly as the main order path reads
+    // it when there is no price limit to hide inside.
+    val tokens = tokenize(lower).map { it.word.lowercase() }
+    val side = pending.side ?: when {
+        vocab.downWords.any { it in tokens || (it.contains(' ') && lower.contains(it)) } -> TradeSide.DOWN
+        vocab.upWords.any { it in tokens || (it.contains(' ') && lower.contains(it)) } -> TradeSide.UP
+        containsAnyWord(lower, vocab.sellVerbs) -> TradeSide.DOWN
+        containsAnyWord(lower, vocab.buyVerbs) -> TradeSide.UP
+        else -> null
+    } ?: return VoiceParseResult.AskAgain(
+        "I did not catch whether to buy up or sell down. Say it again.", pending
+    )
+    val amount = pending.amountUsd ?: run {
+        // The strike number is never the amount: a number right
+        // after above/below, or one that appears in the market's
+        // own question, is the price, not dollars.
+        val strikeNumbers = numbers.filter { n ->
+            val before = tokenize(lower).filter { it.end <= n.start }.takeLast(1)
+            val w = before.firstOrNull()?.word?.lowercase().orEmpty()
+            w in limitBelowWords(language) || w in limitAboveWords(language) ||
+                numberAppearsIn(market.question, n.value)
+        }.map { it.start }.toSet()
+        numbers.firstOrNull { it.start !in strikeNumbers }?.value
+    } ?: return VoiceParseResult.AskAgain(vocab.askAmount, pending)
+    val amountErr = orderAmountError(formatVoiceAmount(amount))
+    if (amountErr != null) return VoiceParseResult.AskAgain(amountErr, pending)
+    if (amount <= 0) return VoiceParseResult.AskAgain(vocab.askAmount, pending)
+    val sideWord = if (side == TradeSide.UP) "Yes" else "No"
+    val verb = if (side == TradeSide.UP) "Buy" else "Sell"
+    val readback = "$verb ${formatVoiceAmount(amount)} $sideWord on ${marketShortLabel(market)}"
+    return VoiceParseResult.Order(
+        VoiceOrder(
+            marketId = market.id,
+            marketLabel = marketShortLabel(market),
+            side = side,
+            amountUsd = amount,
+            readback = readback
+        )
+    )
+}
+
 /**
  * Parses a spoken sentence against the live markets. [currentMarketId]
  * is the market open on screen, if any: when the user says "buy 50
@@ -965,7 +1143,8 @@ fun parseVoiceUtterance(
     text: String,
     markets: List<Market>,
     currentMarketId: String? = null,
-    language: VoiceLanguage = VoiceLanguage.ENGLISH
+    language: VoiceLanguage = VoiceLanguage.ENGLISH,
+    pending: PendingDisambiguation? = null
 ): VoiceParseResult {
     val vocab = vocabFor(language)
     val clean = normalizeHeard(text, language).trim()
@@ -981,6 +1160,15 @@ fun parseVoiceUtterance(
     val hasTradeVerb = containsAnyWord(lower, vocab.buyVerbs) ||
         containsAnyWord(lower, vocab.sellVerbs) ||
         containsAnyWord(lower, tradeWords(language))
+
+    // v1.1.31: the follow-up to a disambiguation question has no
+    // trade verb ("Bitcoin above 58k", "the 6:35 one"), so without
+    // this it falls to the question path and dies with "I did not
+    // catch that". A price or time answer goes to the pending
+    // markets first; anything else falls through as before.
+    if (pending != null && !hasTradeVerb) {
+        resolvePendingAnswer(clean, lower, markets, pending, language)?.let { return it }
+    }
 
     if (startsQuestion || !hasTradeVerb) return parseVoiceQuestion(clean, markets, currentMarketId, language)
 
@@ -1096,31 +1284,56 @@ fun parseVoiceUtterance(
     val resolvedSide = side ?: limitSide
         ?: return VoiceParseResult.AskAgain("I did not catch whether to buy up or sell down. Say it again.")
 
+    // The amount is read before the market is picked, so the
+    // disambiguation question can carry it into the next turn:
+    // "buy BTC down, 90k, 0.5k" already said $500, and the
+    // follow-up ("the 6:35 one") should not have to say it again.
+    // A price limit's number never counts as the amount either:
+    // "below 35" is the price, not $35.
+    val numbers = spokenNumbers(clean, language).filter { n ->
+        limit == null || n.start != limit.numberStart
+    }
+    // v1.1.31: the fallback is the smallest number that is not part
+    // of any market's price, not the first. "Buy BTC down, 90k,
+    // 0.5k" names a big price and a smaller amount in one breath,
+    // and the first number (90k) is the price, not $90,000.
+    val amountNumber = numbers.firstOrNull { assetPos == null || it.end <= assetPos }
+        ?: numbers.filter { n -> candidates.none { numberAppearsIn(it.question, n.value) } }
+            .minByOrNull { it.value }
+
     val market: Market = limitMarket ?: if (candidates.size == 1) {
         candidates[0]
     } else {
-        // More than one market for the coin: use the price or direction
-        // the user named ("above 90k"). A tie is never guessed.
-        val numbers = spokenNumbers(clean)
+        // More than one market for the coin: use the price, the
+        // direction or the time the user named. A tie is settled
+        // by the soonest-expiring market, and the read-back names
+        // its window, so the user can still say no. When nothing
+        // matches at all, the question names the real options
+        // (times or prices) and remembers the side and the amount
+        // for the follow-up.
         val afterAsset = numbers.filter { assetPos == null || it.start > assetPos }
         var best: Market? = null
         var bestScore = 0
-        var tied = false
+        val tied = mutableListOf<Market>()
         for (m in candidates) {
-            var score = 0
-            for (n in afterAsset) if (numberAppearsIn(m.question, n.value)) score += 2
-            if ((lower.contains("above") || lower.contains("over")) && m.question.lowercase().contains("above")) score += 1
-            if ((lower.contains("below") || lower.contains("under")) && m.question.lowercase().contains("below")) score += 1
+            val score = disambiguationScore(lower, m, afterAsset)
             if (score > bestScore) {
                 bestScore = score
                 best = m
-                tied = false
+                tied.clear()
+                tied.add(m)
             } else if (score == bestScore && score > 0) {
-                tied = true
+                tied.add(m)
             }
         }
-        if (best == null || bestScore == 0 || tied) {
-            return VoiceParseResult.AskAgain("I heard more than one $asset market. Say the price, for example above 90k.")
+        if (best == null || bestScore == 0) {
+            return VoiceParseResult.AskAgain(
+                disambiguationMessage(asset, candidates),
+                PendingDisambiguation(asset, resolvedSide, amountNumber?.value, candidates.map { it.id })
+            )
+        }
+        if (tied.size > 1) {
+            best = tied.minByOrNull { if (it.end > 0) it.end else Long.MAX_VALUE } ?: best
         }
         best
     }
@@ -1130,15 +1343,7 @@ fun parseVoiceUtterance(
     // number anywhere. Otherwise a number after the coin counts as the
     // amount only when it is not part of the market's price: "buy
     // bitcoin 50" is $50, "buy bitcoin above 90k" is not $90,000.
-    // A price limit's number never counts as the amount either:
-    // "below 35" is the price, not $35.
-    val numbers = spokenNumbers(clean, language).filter { n ->
-        limit == null || n.start != limit.numberStart
-    }
-    val amountNumber = numbers.firstOrNull { assetPos == null || it.end <= assetPos }
-        ?: numbers.firstOrNull { n -> candidates.none { numberAppearsIn(it.question, n.value) } }
-        ?: return VoiceParseResult.AskAgain(vocab.askAmount)
-    val amount = amountNumber.value
+    val amount = (amountNumber ?: return VoiceParseResult.AskAgain(vocab.askAmount)).value
     val amountErr = orderAmountError(formatVoiceAmount(amount))
     if (amountErr != null) return VoiceParseResult.AskAgain(amountErr)
     if (amount <= 0) return VoiceParseResult.AskAgain(vocab.askAmount)

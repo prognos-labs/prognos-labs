@@ -75,8 +75,8 @@ class V1128Test {
     @Test
     fun versionIs1128() {
         val gradle = readSource("app/build.gradle.kts")
-        assertTrue(gradle.contains("versionCode = 40"))
-        assertTrue(gradle.contains("versionName = \"1.1.30\""))
+        assertTrue(gradle.contains("versionCode = 41"))
+        assertTrue(gradle.contains("versionName = \"1.1.31\""))
     }
 
     // ---- The silence that ends a turn: 1200 ms, not 750/800 ----

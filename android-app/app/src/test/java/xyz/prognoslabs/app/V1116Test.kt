@@ -88,7 +88,7 @@ class V1116Test {
     @Test
     fun versionIs1123() {
         assertEquals(40, BuildConfig.VERSION_CODE)
-        assertEquals("1.1.30", BuildConfig.VERSION_NAME)
+        assertEquals("1.1.31", BuildConfig.VERSION_NAME)
     }
 
     // ---- 1. Whisper only: the built-in recognizer is gone ----

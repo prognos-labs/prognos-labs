@@ -68,6 +68,7 @@ import xyz.prognoslabs.app.data.VoiceLanguage
 import xyz.prognoslabs.app.data.VoiceFeatures
 import xyz.prognoslabs.app.data.VoiceHistoryEntry
 import xyz.prognoslabs.app.data.VoiceHistoryOutcome
+import xyz.prognoslabs.app.data.PendingDisambiguation
 import xyz.prognoslabs.app.data.VoiceOrder
 import xyz.prognoslabs.app.data.assetMention
 import xyz.prognoslabs.app.data.VoiceParseResult
@@ -387,6 +388,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * one is open; this is the fallback. Cleared when the call
      * ends, so a later call never trades a stale market. */
     private var lastVoiceMarketId: String? = null
+
+    /** v1.1.31: the question the voice asked when it could not
+     * tell two markets apart ("which time?"), so the next thing
+     * the user says is parsed as the answer to it instead of
+     * starting fresh. Single use: any parse result replaces it,
+     * and it is cleared when the call ends. */
+    private var voicePendingDisambiguation: PendingDisambiguation? = null
 
     /** True when the phone's language is one this build supports
      * for voice. When false the app says so plainly and listens
@@ -1189,6 +1197,7 @@ private fun restartListening() {
             clearChallengeState()
             voicePendingOrder = null
             voicePendingHeard = null
+            voicePendingDisambiguation = null
             lastVoiceMarketId = null
         }
         _voiceSheet.value = null
@@ -1338,15 +1347,20 @@ private fun restartListening() {
             ) {
                 parseBestVoiceUtteranceMulti(
                     event.candidates.zip(event.candidateLanguages),
-                    _home.value.markets, _detail.value.market?.id ?: lastVoiceMarketId
+                    _home.value.markets, _detail.value.market?.id ?: lastVoiceMarketId,
+                    voicePendingDisambiguation
                 )
             } else {
                 val (p, h) = parseBestVoiceUtterance(
                     event.candidates, _home.value.markets, _detail.value.market?.id ?: lastVoiceMarketId,
-                    event.detectedLanguage ?: setLang
+                    event.detectedLanguage ?: setLang, voicePendingDisambiguation
                 )
                 Triple(p, h, event.detectedLanguage ?: setLang)
             }
+        // v1.1.31: the pending disambiguation is single use. A new
+        // ask-again carries a fresh one; anything else clears it,
+        // so a later turn never answers a stale question.
+        voicePendingDisambiguation = (parsed as? VoiceParseResult.AskAgain)?.pending
         // v1.1.15: the words the user just said show as text in the
         // sheet. Partials only arrive while speaking, and a short
         // sentence ends before the first one, so the final result
